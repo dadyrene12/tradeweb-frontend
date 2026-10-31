@@ -1,5 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
+import api from '../lib/api';
+import { toStoreProduct } from '../lib/productMapper';
 import {
   FiGrid, FiList, FiChevronRight, FiChevronLeft, FiSearch, FiX, FiStar,
   FiShoppingCart, FiSliders, FiCheck,
@@ -7,7 +9,7 @@ import {
 import { FaWhatsapp } from 'react-icons/fa';
 import { PackageSearch } from 'lucide-react';
 import { useCart } from '../context/CartContext';
-import products from '../data/products';
+import fallbackProducts from '../data/products';
 
 /* ---------- helpers ---------- */
 // Currency: Rwandan franc. Amounts are shown exactly as stored in your product data.
@@ -111,16 +113,42 @@ const ShopCard = ({ product, view, onAdd, onWhatsapp }) => {
 const Shop = () => {
   const { addToCart } = useCart();
   const [searchParams, setSearchParams] = useSearchParams();
+  const [products, setProducts] = useState(fallbackProducts);
+  const [categories, setCategories] = useState([]);
 
   const category = normalize(searchParams.get('category'));
   const urlSearch = searchParams.get('search') || '';
+
+  useEffect(() => {
+    let active = true;
+
+    api
+      .get('/products', { params: { limit: 200 } })
+      .then(({ data }) => {
+        if (active && data.products?.length) {
+          setProducts(data.products.map(toStoreProduct));
+        }
+      })
+      .catch(() => {});
+
+    api
+      .get('/settings/categories')
+      .then(({ data }) => {
+        if (active) setCategories(data.categories || []);
+      })
+      .catch(() => {});
+
+    return () => {
+      active = false;
+    };
+  }, []);
 
   // Slider range + step adapt to the size of your prices (FRW amounts are large).
   const { maxPrice, priceStep } = useMemo(() => {
     const highest = Math.max(0, ...products.map((p) => Number(p.price) || 0));
     const step = highest >= 100000 ? 1000 : highest >= 10000 ? 100 : 10;
     return { maxPrice: Math.max(step * 10, Math.ceil(highest / step) * step), priceStep: step };
-  }, []);
+  }, [products]);
 
   const [searchText, setSearchText] = useState(urlSearch);
   const [price, setPrice] = useState([0, maxPrice]);
@@ -133,17 +161,34 @@ const Shop = () => {
   const [page, setPage] = useState(1);
   const [filtersOpen, setFiltersOpen] = useState(false);
 
+  useEffect(() => {
+    setPrice([0, maxPrice]);
+  }, [maxPrice]);
+
   useEffect(() => setSearchText(urlSearch), [urlSearch]);
 
   /* derived option lists */
   const categoryOptions = useMemo(() => {
+    if (categories.length) {
+      const counts = products.reduce((acc, p) => {
+        const key = normalize(p.category);
+        if (key) acc[key] = (acc[key] || 0) + 1;
+        return acc;
+      }, {});
+      return categories.map((cat) => ({
+        key: cat.slug,
+        count: counts[cat.slug] || 0,
+        label: cat.name,
+      }));
+    }
+
     const map = new Map();
     products.forEach((p) => {
       const key = normalize(p.category);
       if (key) map.set(key, (map.get(key) || 0) + 1);
     });
     return [...map.entries()].map(([key, count]) => ({ key, count, label: labelFor(key) }));
-  }, []);
+  }, [products, categories]);
 
   const brandOptions = useMemo(() => {
     const map = new Map();
@@ -151,7 +196,7 @@ const Shop = () => {
       if (p.brand) map.set(p.brand, (map.get(p.brand) || 0) + 1);
     });
     return [...map.entries()].map(([name, count]) => ({ name, count }));
-  }, []);
+  }, [products]);
 
   /* filtering + sorting */
   const filtered = useMemo(() => {
@@ -174,7 +219,7 @@ const Shop = () => {
     if (sort === 'price-desc') sorted.sort((a, b) => b.price - a.price);
     if (sort === 'discount') sorted.sort((a, b) => discountPct(b) - discountPct(a));
     return sorted;
-  }, [category, urlSearch, price, brandsSel, minRating, onlyDeals, sort]);
+  }, [products, category, urlSearch, price, brandsSel, minRating, onlyDeals, sort]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
   const currentPage = Math.min(page, totalPages);

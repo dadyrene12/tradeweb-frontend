@@ -309,6 +309,11 @@ const Header = () => {
           <div className="flex items-center gap-4 text-[13px] font-semibold">
             {user ? (
               <>
+                {user.role === 'admin' && (
+                  <Link to="/admin" className="rounded-lg bg-orange-50 px-3 py-1.5 font-bold text-[#FF6C00] transition-colors hover:bg-[#FF6C00] hover:text-white">
+                    Admin
+                  </Link>
+                )}
                 <Link to="/account" className="text-[#0B1B33] transition-colors hover:text-[#FF6C00]">My account</Link>
                 <button type="button" onClick={handleLogout} className="flex items-center gap-1.5 text-gray-500 transition-colors hover:text-red-500">
                   <FiLogOut className="h-4 w-4" /> Sign out
@@ -404,13 +409,20 @@ const Header = () => {
                 <FaWhatsapp className="h-5 w-5" /> Chat on WhatsApp
               </a>
               {user ? (
-                <div className="flex gap-2">
-                  <Link to="/account" className="flex-1 rounded-xl bg-[#0B1B33] py-3 text-center text-[14px] font-bold text-white">
-                    My account ({firstName})
-                  </Link>
-                  <button type="button" onClick={handleLogout} aria-label="Sign out" className="flex w-12 items-center justify-center rounded-xl bg-red-50 text-red-500">
-                    <FiLogOut className="h-5 w-5" />
-                  </button>
+                <div className="space-y-2">
+                  {user.role === 'admin' && (
+                    <Link to="/admin" className="block rounded-xl bg-orange-50 py-3 text-center text-[14px] font-bold text-[#FF6C00]">
+                      Admin dashboard
+                    </Link>
+                  )}
+                  <div className="flex gap-2">
+                    <Link to="/account" className="flex-1 rounded-xl bg-[#0B1B33] py-3 text-center text-[14px] font-bold text-white">
+                      My account ({firstName})
+                    </Link>
+                    <button type="button" onClick={handleLogout} aria-label="Sign out" className="flex w-12 items-center justify-center rounded-xl bg-red-50 text-red-500">
+                      <FiLogOut className="h-5 w-5" />
+                    </button>
+                  </div>
                 </div>
               ) : (
                 <div className="flex gap-2">

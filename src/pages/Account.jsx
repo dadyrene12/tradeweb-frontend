@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { FiCheckCircle, FiLogOut, FiPackage, FiUser } from 'react-icons/fi';
+import { FiCheckCircle, FiLogOut, FiPackage, FiUser, FiSettings } from 'react-icons/fi';
 import { useAuth } from '../context/AuthContext';
 
 const Account = () => {
@@ -86,6 +86,14 @@ const Account = () => {
 
           <div className="bg-white border border-gray-200 rounded-xl p-6">
             <h3 className="font-bold text-gray-900 mb-4">Account</h3>
+            {user.role === 'admin' && (
+              <Link
+                to="/admin"
+                className="mb-3 w-full inline-flex items-center justify-center gap-2 bg-[#0B1B33] text-white font-semibold py-2.5 rounded-lg hover:bg-[#FF6C00] transition-colors"
+              >
+                <FiSettings className="w-4 h-4" /> Admin dashboard
+              </Link>
+            )}
             <button
               type="button"
               onClick={logout}

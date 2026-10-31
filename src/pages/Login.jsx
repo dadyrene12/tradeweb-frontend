@@ -55,9 +55,10 @@ const Login = () => {
     setIsSubmitting(true);
 
     try {
-      await login(form.email.trim(), form.password, form.rememberMe);
+      const result = await login(form.email.trim(), form.password, form.rememberMe);
       toast.success('Welcome back!');
-      navigate(location.state?.from || '/', { replace: true });
+      const destination = location.state?.from || (result.user?.role === 'admin' ? '/admin' : '/');
+      navigate(destination, { replace: true });
     } catch (loginError) {
       const parsed = getApiError(loginError);
       setError(parsed.message);

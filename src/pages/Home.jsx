@@ -1,28 +1,27 @@
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { Link } from 'react-router-dom';
-import { FiShoppingCart, FiStar, FiZap, FiShare2, FiX, FiCheck, FiMoreHorizontal } from 'react-icons/fi';
+import { FiShoppingCart, FiStar, FiShare2, FiX, FiCheck, FiMoreHorizontal } from 'react-icons/fi';
 import { FaWhatsapp, FaFacebook, FaTwitter, FaLinkedin, FaTelegram } from 'react-icons/fa';
 import {
   Tv, WashingMachine, Refrigerator, CookingPot, Speaker, Blend, Flame, House,
-  Headphones, ChevronRight, ChevronLeft, LayoutGrid, ArrowRight,
-  Truck, RotateCcw, ShieldCheck, Gift, Sparkles, Search, Store, Zap,
+  ChevronRight, ChevronLeft, LayoutGrid, ArrowRight, Truck, ShieldCheck,
+  Gift, Sparkles, Search, Store, Zap, RotateCcw, Headphones, BadgeCheck,
 } from 'lucide-react';
 import { useCart } from '../context/CartContext';
-import products, { getDiscountedProducts } from '../data/products';
+import api from '../lib/api';
+import { toStoreProduct } from '../lib/productMapper';
+import fallbackProducts, { getDiscountedProducts } from '../data/products';
 
 /* -------------------------------------------------------------------------- */
 /*  Settings                                                                   */
 /* -------------------------------------------------------------------------- */
-// Optional: your store's WhatsApp number (digits only, with country code, e.g. 15551234567).
-// Leave empty and WhatsApp will ask the customer to pick a contact.
+// Optional: your store's WhatsApp number (digits only, with country code, e.g. 250788000000).
 const WHATSAPP_NUMBER = '';
 const waLink = (text) => `https://wa.me/${WHATSAPP_NUMBER}${text ? `?text=${encodeURIComponent(text)}` : ''}`;
 
 const CART_ROUTE = '/cart';
-
-// Currency: Rwandan franc. Amounts are shown exactly as stored in your product data.
 const CURRENCY = 'FRW';
-const FREE_SHIPPING_THRESHOLD = 100000; // keep in sync with STORE.freeShippingThreshold in the cart page
+const FREE_SHIPPING_THRESHOLD = 100000; // keep in sync with the cart page
 const formatMoney = (value) => `${CURRENCY} ${Math.round(Number(value) || 0).toLocaleString('en-US')}`;
 
 /* -------------------------------------------------------------------------- */
@@ -41,12 +40,273 @@ const CATEGORIES = [
 
 const QUICK_LINKS = [
   { id: 'deals', label: 'Deals of the day', icon: Flame },
-  { id: 'flash', label: 'Flash sale', icon: Zap },
+  { id: 'flash', label: 'Super deal', icon: Zap },
   { id: 'featured', label: 'Featured', icon: Gift },
   { id: 'new', label: 'New arrivals', icon: Sparkles },
 ];
 
 const BRANDS = ['Hisense', 'LG', 'Samsung', 'Haier', 'SPJ', 'Sayona', 'KING'];
+
+const HERO_CONFIG = [
+  { id: 13, tag: 'Limited offer', highlight: 'Cinema-sized 4K for your living room', cta: 'Shop this TV', thumbLabel: 'TV deals' },
+  { id: 23, tag: 'New arrival', highlight: 'Premium cooling for a modern kitchen', cta: 'Shop refrigerators', thumbLabel: 'Home appliances' },
+  { id: 3, tag: 'Audio week', highlight: 'Immersive sound, zero compromise', cta: 'Shop audio', thumbLabel: 'Audio' },
+];
+
+const BANNER_CONFIG = [
+  { id: 11, tag: 'Up to 40% off', title: 'Smart TV deals', sub: 'Big screens, sharper picture', cta: 'Shop TVs', overlay: 'from-[#FF7A1A]/95 via-[#E85D04]/85 to-[#B84500]/70' },
+  { id: 16, tag: 'Free delivery', title: 'Home appliances', sub: 'Upgrade your kitchen today', cta: 'Shop now', overlay: 'from-[#0B1B33]/95 via-[#16315C]/85 to-[#1E4F8F]/70' },
+];
+
+const PROMO_BANNERS = [
+  { title: 'Home appliance deals', sub: 'New arrivals', img: '/images/products/product-16.jpg', bg: 'from-[#1E73BE] to-[#154F85]' },
+  { title: 'Entertainment mega sale', sub: 'Up to 50% off', img: '/images/products/product-13.jpg', bg: 'from-[#FF7A1A] to-[#D94F00]' },
+  { title: 'Audio & speakers', sub: 'Free shipping', img: '/images/products/product-03.jpg', bg: 'from-[#1F2A44] to-[#0B1B33]' },
+  { title: 'Smart TVs', sub: 'Limited time', img: '/images/products/product-11.jpg', bg: 'from-[#6D3BD8] to-[#4A22A8]' },
+];
+
+/* -------------------------------------------------------------------------- */
+/*  Countdown to the end of today (local time), so it is always real           */
+/* -------------------------------------------------------------------------- */
+const useEndOfDayCountdown = () => {
+  const calc = () => {
+    const now = new Date();
+    const end = new Date(now);
+    end.setHours(23, 59, 59, 999);
+    const total = Math.max(0, Math.floor((end - now) / 1000));
+    return {
+      hours: Math.floor(total / 3600),
+      minutes: Math.floor((total % 3600) / 60),
+      seconds: total % 60,
+    };
+  };
+  const [time, setTime] = useState(calc);
+  useEffect(() => {
+    const t = setInterval(() => setTime(calc()), 1000);
+    return () => clearInterval(t);
+  }, []);
+  return time;
+};
+
+/* -------------------------------------------------------------------------- */
+/*  Super deal of the day                                                      */
+/* -------------------------------------------------------------------------- */
+const SuperDeal = ({ id = 'flash', product, onAdd, onWhatsapp, onShare, formatMoney }) => {
+  const time = useEndOfDayCountdown();
+  if (!product) return null;
+
+  const sold = Number(product.sold) || 0;
+  const left = Number(product.available) || 0;
+  const soldPct = sold + left > 0 ? Math.min(100, Math.round((sold / (sold + left)) * 100)) : 0;
+  const hasDiscount = product.oldPrice && product.oldPrice > product.price;
+  const savings = hasDiscount ? product.oldPrice - product.price : 0;
+  const pct = hasDiscount ? Math.round((savings / product.oldPrice) * 100) : 0;
+  const almostGone = left > 0 && left <= 50;
+
+  return (
+    <section id={id} className="mb-10 scroll-mt-4" aria-labelledby="super-deal-title">
+      <style>{`
+        @keyframes dealFloat { 0%,100% { transform:translateY(0) } 50% { transform:translateY(-7px) } }
+        @keyframes dealShadow { 0%,100% { transform:scaleX(1); opacity:.35 } 50% { transform:scaleX(.82); opacity:.22 } }
+        @keyframes dealShine { from { transform:translateX(-100%) } to { transform:translateX(300%) } }
+        @keyframes dealPing { 0% { transform:scale(1); opacity:.55 } 100% { transform:scale(1.9); opacity:0 } }
+        @media (prefers-reduced-motion: reduce) { .deal-anim { animation: none !important; } }
+      `}</style>
+
+      <div className="overflow-hidden rounded-3xl border border-orange-100 bg-white shadow-[0_16px_40px_-22px_rgba(255,108,0,0.4)]">
+        {/* Slim header bar */}
+        <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-b border-orange-100 bg-gradient-to-r from-[#FFF7F0] to-white px-4 py-3 sm:px-6">
+          <div className="flex items-center gap-2.5">
+            <span className="relative flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-[#FF6C00] to-[#FF9A4D] text-white shadow-md shadow-orange-500/30">
+              <span className="deal-anim absolute inset-0 rounded-xl bg-[#FF6C00] [animation:dealPing_2s_ease-out_infinite]" />
+              <Zap className="relative h-[18px] w-[18px]" fill="currentColor" />
+            </span>
+            <div className="leading-tight">
+              <h2 id="super-deal-title" className="text-[17px] font-extrabold tracking-tight text-[#0B1B33] sm:text-[21px]">Super deal of the day</h2>
+              <p className="text-[11.5px] text-gray-500 sm:text-[12px]">One product, one price, today only</p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-1" role="timer" aria-label="Time left on this deal">
+            <span className="mr-1 text-[12px] font-semibold text-[#D94F00]">Ends in</span>
+            {[
+              ['h', time.hours],
+              ['m', time.minutes],
+              ['s', time.seconds],
+            ].map(([unit, value], i) => (
+              <React.Fragment key={unit}>
+                {i > 0 && <span className="text-[14px] font-bold text-[#FF6C00]">:</span>}
+                <div className="flex min-w-[40px] items-baseline justify-center gap-0.5 rounded-lg bg-[#0B1B33] px-2 py-1.5 text-white">
+                  <span className="text-[15px] font-extrabold tabular-nums leading-none sm:text-[17px]">{String(value).padStart(2, '0')}</span>
+                  <span className="text-[9.5px] text-white/60">{unit}</span>
+                </div>
+              </React.Fragment>
+            ))}
+          </div>
+        </div>
+
+        <div className="grid lg:grid-cols-[0.95fr_1.05fr]">
+          {/* ---------- Image stage ---------- */}
+          <div className="relative flex h-[230px] items-center justify-center overflow-hidden bg-gradient-to-br from-[#FFF3E6] via-[#FFE9D4] to-[#FFD9B8] sm:h-[270px] lg:h-auto lg:min-h-[300px]">
+            {/* spotlight */}
+            <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_45%,rgba(255,255,255,0.95)_0%,rgba(255,255,255,0.55)_32%,transparent_62%)]" />
+            <div
+              className="pointer-events-none absolute inset-0 opacity-40"
+              style={{ backgroundImage: 'radial-gradient(rgba(255,108,0,0.14) 1px, transparent 1px)', backgroundSize: '18px 18px' }}
+            />
+            <div className="pointer-events-none absolute -left-10 -top-10 h-36 w-36 rounded-full bg-[#FF9A4D]/30 blur-2xl" />
+            <div className="pointer-events-none absolute -bottom-12 -right-8 h-40 w-40 rounded-full bg-[#FF6C00]/20 blur-2xl" />
+
+            {/* product */}
+            <div className="relative flex h-full w-full items-center justify-center px-6 pb-7 pt-5 sm:px-10 lg:py-6">
+              <img
+                src={product.image}
+                alt={product.name}
+                className="deal-anim relative z-10 h-full max-h-[210px] w-auto max-w-full object-contain mix-blend-multiply drop-shadow-[0_18px_18px_rgba(11,27,51,0.25)] [animation:dealFloat_5s_ease-in-out_infinite] sm:max-h-[250px] lg:max-h-[280px]"
+              />
+              {/* ground shadow */}
+              <span className="deal-anim pointer-events-none absolute bottom-4 left-1/2 h-3 w-[46%] -translate-x-1/2 rounded-[50%] bg-[#0B1B33] blur-md [animation:dealShadow_5s_ease-in-out_infinite] sm:bottom-5" />
+            </div>
+
+            {pct > 0 && (
+              <div className="absolute left-3 top-3 z-20 flex h-[62px] w-[62px] -rotate-6 flex-col items-center justify-center rounded-full bg-gradient-to-br from-red-500 to-red-600 text-white shadow-lg shadow-red-500/30 ring-4 ring-white sm:left-4 sm:top-4 sm:h-[72px] sm:w-[72px]">
+                <span className="text-[9.5px] font-semibold leading-none">Save</span>
+                <span className="text-[20px] font-black leading-none sm:text-[24px]">{pct}%</span>
+              </div>
+            )}
+
+            <span className="absolute bottom-3 right-3 z-20 flex items-center gap-1.5 rounded-full bg-white px-2.5 py-1 text-[11px] font-bold text-[#0B1B33] shadow-md ring-1 ring-orange-100 sm:bottom-4 sm:right-4">
+              <BadgeCheck className="h-3.5 w-3.5 text-emerald-600" />
+              Warranty included
+            </span>
+          </div>
+
+          {/* ---------- Details ---------- */}
+          <div className="flex flex-col justify-center p-4 sm:p-6">
+            <Link
+              to={`/product/${product.id}`}
+              className="line-clamp-2 text-[20px] font-extrabold leading-tight tracking-tight text-[#0B1B33] transition-colors hover:text-[#FF6C00] sm:text-[24px]"
+            >
+              {product.name}
+            </Link>
+            <p className="mt-1.5 line-clamp-2 text-[13px] leading-relaxed text-gray-600 sm:text-[14px]">{product.description}</p>
+
+            {/* Price + savings */}
+            <div className="mt-3 flex flex-wrap items-end gap-x-3 gap-y-1">
+              <span className="text-[28px] font-black leading-none text-[#D94F00] sm:text-[34px]">{formatMoney(product.price)}</span>
+              {hasDiscount && <span className="pb-0.5 text-[14px] text-gray-400 line-through sm:text-[16px]">{formatMoney(product.oldPrice)}</span>}
+              {hasDiscount && (
+                <span className="mb-0.5 rounded-full bg-emerald-100 px-2.5 py-0.5 text-[11.5px] font-bold text-emerald-700">
+                  Save {formatMoney(savings)}
+                </span>
+              )}
+            </div>
+
+            {/* Stock progress */}
+            <div className="mt-3.5">
+              <div className="mb-1.5 flex items-center justify-between gap-3 text-[12px]">
+                <span className="text-gray-600">
+                  Sold <b className="text-[#0B1B33]">{sold}</b>
+                </span>
+                <span className={`inline-flex items-center gap-1 font-bold ${almostGone ? 'text-[#D94F00]' : 'text-emerald-600'}`}>
+                  {almostGone && <Flame className="h-3.5 w-3.5" fill="currentColor" />}
+                  {almostGone ? `Selling fast, only ${left} left` : `${left} left`}
+                </span>
+              </div>
+              <div
+                className="h-2.5 w-full overflow-hidden rounded-full bg-orange-100"
+                role="progressbar"
+                aria-valuenow={soldPct}
+                aria-valuemin={0}
+                aria-valuemax={100}
+                aria-label={`${soldPct}% sold`}
+              >
+                <div className="relative h-full overflow-hidden rounded-full bg-gradient-to-r from-[#FF9A4D] to-[#FF6C00]" style={{ width: `${soldPct}%` }}>
+                  <span className="deal-anim absolute inset-y-0 left-0 w-1/3 bg-gradient-to-r from-transparent via-white/60 to-transparent [animation:dealShine_2.4s_linear_infinite]" />
+                </div>
+              </div>
+            </div>
+
+            {/* Perks */}
+            <ul className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-[11.5px] font-medium text-gray-600">
+              {[
+                [Truck, 'Free delivery'],
+                [ShieldCheck, 'Secure checkout'],
+                [RotateCcw, '30-day returns'],
+              ].map(([Icon, label]) => (
+                <li key={label} className="inline-flex items-center gap-1.5">
+                  <Icon className="h-3.5 w-3.5 text-[#FF6C00]" />
+                  {label}
+                </li>
+              ))}
+            </ul>
+
+            {/* Actions */}
+            <div className="mt-4 flex gap-2.5">
+              <button
+                type="button"
+                onClick={() => onAdd(product)}
+                className="relative flex flex-1 items-center justify-center gap-2 overflow-hidden rounded-xl bg-gradient-to-r from-[#FF6C00] to-[#FF8A2B] px-4 py-3 text-[14px] font-extrabold text-white shadow-md shadow-orange-500/30 transition-transform hover:scale-[1.02] active:scale-[0.98] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#FF6C00]"
+              >
+                <span className="deal-anim absolute inset-y-0 left-0 w-1/4 bg-gradient-to-r from-transparent via-white/40 to-transparent [animation:dealShine_3s_linear_infinite]" />
+                <FiShoppingCart className="relative h-[18px] w-[18px]" />
+                <span className="relative">Grab this deal</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => onWhatsapp(product)}
+                aria-label="Order on WhatsApp"
+                className="flex items-center justify-center gap-2 rounded-xl bg-[#25D366] px-4 py-3 text-[13.5px] font-bold text-white transition-colors hover:bg-[#1DA851]"
+              >
+                <FaWhatsapp className="h-5 w-5" />
+                <span className="hidden sm:inline">WhatsApp</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => onShare(product)}
+                aria-label="Share this deal"
+                className="flex h-[46px] w-[46px] flex-shrink-0 items-center justify-center rounded-xl border border-gray-200 bg-white text-gray-700 transition-colors hover:border-orange-200 hover:bg-orange-50 hover:text-[#FF6C00]"
+              >
+                <FiShare2 className="h-[18px] w-[18px]" />
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+};
+
+/* -------------------------------------------------------------------------- */
+/*  Service features: 2x2 on phones with wrapping text, 4 across on desktop    */
+/* -------------------------------------------------------------------------- */
+const ServiceFeatures = ({ freeShippingText }) => {
+  const items = [
+    { icon: Truck, title: 'Free shipping', desc: freeShippingText, tone: 'bg-orange-50 text-[#FF6C00] ring-orange-100' },
+    { icon: RotateCcw, title: 'Easy returns', desc: '30-day money back', tone: 'bg-emerald-50 text-emerald-600 ring-emerald-100' },
+    { icon: ShieldCheck, title: 'Secure payment', desc: '100% safe and encrypted', tone: 'bg-blue-50 text-blue-600 ring-blue-100' },
+    { icon: Headphones, title: '24/7 support', desc: 'Expert help anytime', tone: 'bg-purple-50 text-purple-600 ring-purple-100' },
+  ];
+
+  return (
+    <div className="mb-10 grid grid-cols-2 gap-2.5 sm:gap-3 lg:grid-cols-4 lg:gap-4">
+      {items.map(({ icon: Icon, title, desc, tone }) => (
+        <div
+          key={title}
+          className="flex flex-col items-start gap-3 rounded-2xl border border-gray-200 bg-white p-3.5 shadow-sm transition-shadow hover:shadow-md sm:flex-row sm:items-center sm:p-4"
+        >
+          <span className={`flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-xl ring-1 ${tone}`}>
+            <Icon className="h-5 w-5" strokeWidth={1.9} />
+          </span>
+          <div className="min-w-0">
+            <h4 className="text-[13.5px] font-bold leading-tight text-[#0B1B33]">{title}</h4>
+            <p className="mt-0.5 text-[12px] leading-snug text-gray-500">{desc}</p>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+};
 
 /* -------------------------------------------------------------------------- */
 /*  Small reusable pieces                                                      */
@@ -76,9 +336,7 @@ const SectionHeader = ({ icon: Icon, title, subtitle, action, children }) => (
 
 /** Horizontal snap-scroll row on phones that becomes a normal grid from `md` up. */
 const ScrollRow = ({ className = '', children }) => (
-  <div
-    className={`no-scrollbar -mx-4 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-2 sm:mx-0 sm:px-0 md:grid md:gap-4 md:overflow-visible md:pb-0 ${className}`}
-  >
+  <div className={`no-scrollbar -mx-4 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-2 sm:mx-0 sm:px-0 md:grid md:gap-4 md:overflow-visible md:pb-0 ${className}`}>
     {children}
   </div>
 );
@@ -101,18 +359,14 @@ const ProductCard = ({ product, onAdd, onWhatsapp, onShare, badge }) => {
   return (
     <article className="group flex h-full w-full flex-col rounded-2xl border border-gray-200 bg-white p-3 transition-all duration-200 hover:border-orange-200 hover:shadow-[0_12px_32px_-12px_rgba(11,27,51,0.18)] sm:p-3.5">
       <div className="relative mb-3 flex h-36 items-center justify-center overflow-hidden rounded-xl bg-[#F6F7F9] sm:h-44">
-        {badge && (
-          <span className={`absolute left-2 top-2 z-10 rounded-full px-2.5 py-1 text-[10px] font-bold text-white sm:left-2.5 sm:top-2.5 ${badge.cls}`}>{badge.label}</span>
-        )}
-        {hasDiscount && (
-          <span className="absolute right-2 top-2 z-10 rounded-full bg-white px-2 py-1 text-[10px] font-bold text-red-600 shadow-sm sm:right-2.5 sm:top-2.5">-{pct}%</span>
-        )}
+        {badge && <span className={`absolute left-2 top-2 z-10 rounded-full px-2.5 py-1 text-[10px] font-bold text-white ${badge.cls}`}>{badge.label}</span>}
+        {hasDiscount && <span className="absolute right-2 top-2 z-10 rounded-full bg-white px-2 py-1 text-[10px] font-bold text-red-600 shadow-sm">-{pct}%</span>}
         <img src={product.image} alt={product.name} loading="lazy" className="max-h-full max-w-full object-contain p-3 mix-blend-multiply transition-transform duration-500 group-hover:scale-105" />
         <button
           type="button"
           onClick={() => onShare(product)}
           aria-label={`Share ${product.name}`}
-          className="absolute bottom-2 right-2 flex h-8 w-8 items-center justify-center rounded-full bg-white text-gray-600 shadow-md transition-all hover:text-[#FF6C00] focus:opacity-100 md:bottom-2.5 md:right-2.5 md:opacity-0 md:group-hover:opacity-100"
+          className="absolute bottom-2 right-2 flex h-8 w-8 items-center justify-center rounded-full bg-white text-gray-600 shadow-md transition-all hover:text-[#FF6C00] focus:opacity-100 md:opacity-0 md:group-hover:opacity-100"
         >
           <FiShare2 className="h-4 w-4" />
         </button>
@@ -158,7 +412,6 @@ const ProductCard = ({ product, onAdd, onWhatsapp, onShare, badge }) => {
 /* -------------------------------------------------------------------------- */
 /*  Side navigation                                                            */
 /* -------------------------------------------------------------------------- */
-/** The category list, shared by the desktop sidebar and the mobile drawer. */
 const CategoryList = ({ items, variant = 'sidebar', onNavigate }) => {
   const isDrawer = variant === 'drawer';
   return (
@@ -168,21 +421,13 @@ const CategoryList = ({ items, variant = 'sidebar', onNavigate }) => {
           <Link
             to={cat.link}
             onClick={onNavigate}
-            className={`group flex w-full items-center gap-3 transition-colors hover:bg-orange-50 active:bg-orange-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#FF6C00] ${
-              isDrawer ? 'rounded-xl px-2.5 py-2' : 'rounded-lg px-2'
-            }`}
+            className={`group flex w-full items-center gap-3 transition-colors hover:bg-orange-50 active:bg-orange-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#FF6C00] ${isDrawer ? 'rounded-xl px-2.5 py-2' : 'rounded-lg px-2'}`}
           >
-            <span
-              className={`flex flex-shrink-0 items-center justify-center rounded-lg bg-orange-50 text-[#FF6C00] ring-1 ring-orange-100 transition-colors group-hover:bg-[#FF6C00] group-hover:text-white group-hover:ring-[#FF6C00] ${
-                isDrawer ? 'h-11 w-11 rounded-xl' : 'h-9 w-9'
-              }`}
-            >
+            <span className={`flex flex-shrink-0 items-center justify-center bg-orange-50 text-[#FF6C00] ring-1 ring-orange-100 transition-colors group-hover:bg-[#FF6C00] group-hover:text-white group-hover:ring-[#FF6C00] ${isDrawer ? 'h-11 w-11 rounded-xl' : 'h-9 w-9 rounded-lg'}`}>
               <cat.icon className={isDrawer ? 'h-[22px] w-[22px]' : 'h-[21px] w-[21px]'} strokeWidth={1.9} />
             </span>
             <span className="min-w-0 flex-1">
-              <span className={`block truncate font-semibold text-[#1F2937] group-hover:text-[#FF6C00] ${isDrawer ? 'text-[15px]' : 'text-[14px]'}`}>
-                {cat.name}
-              </span>
+              <span className={`block truncate font-semibold text-[#1F2937] group-hover:text-[#FF6C00] ${isDrawer ? 'text-[15px]' : 'text-[14px]'}`}>{cat.name}</span>
               {isDrawer && <span className="block truncate text-[12px] text-gray-500">{cat.hint}</span>}
             </span>
             <ChevronRight className="h-4 w-4 flex-shrink-0 text-gray-300 transition-all group-hover:translate-x-0.5 group-hover:text-[#FF6C00]" />
@@ -192,6 +437,10 @@ const CategoryList = ({ items, variant = 'sidebar', onNavigate }) => {
     </ul>
   );
 };
+
+const DrawerLabel = ({ children, first }) => (
+  <p className={`mb-2 px-2.5 text-[11.5px] font-bold text-gray-400 ${first ? '' : 'mt-6'}`}>{children}</p>
+);
 
 /** Slide-out side navigation for phones and tablets. */
 const CategoryDrawer = ({ open, onClose, onJump }) => {
@@ -205,11 +454,8 @@ const CategoryDrawer = ({ open, onClose, onJump }) => {
   }, [query]);
 
   useEffect(() => {
-    if (open) {
-      if (closeRef.current) closeRef.current.focus();
-    } else {
-      setQuery('');
-    }
+    if (open) closeRef.current?.focus();
+    else setQuery('');
   }, [open]);
 
   return (
@@ -217,20 +463,14 @@ const CategoryDrawer = ({ open, onClose, onJump }) => {
       className={`fixed inset-0 z-[60] lg:hidden ${open ? 'visible' : 'pointer-events-none invisible [transition:visibility_0s_linear_0.3s]'}`}
       aria-hidden={!open}
     >
-      <div
-        onClick={onClose}
-        className={`absolute inset-0 bg-[#0B1B33]/60 backdrop-blur-sm transition-opacity duration-300 ${open ? 'opacity-100' : 'opacity-0'}`}
-      />
+      <div onClick={onClose} className={`absolute inset-0 bg-[#0B1B33]/60 backdrop-blur-sm transition-opacity duration-300 ${open ? 'opacity-100' : 'opacity-0'}`} />
 
       <aside
         role="dialog"
         aria-modal="true"
         aria-label="Browse categories"
-        className={`absolute inset-y-0 left-0 flex w-[88%] max-w-[360px] flex-col bg-white shadow-2xl transition-transform duration-300 ease-out ${
-          open ? 'translate-x-0' : '-translate-x-full'
-        }`}
+        className={`absolute inset-y-0 left-0 flex w-[88%] max-w-[360px] flex-col bg-white shadow-2xl transition-transform duration-300 ease-out ${open ? 'translate-x-0' : '-translate-x-full'}`}
       >
-        {/* Header */}
         <div className="flex-shrink-0 bg-gradient-to-br from-[#FF6C00] to-[#FF8A2B] px-4 pb-4 pt-5 text-white">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
@@ -242,13 +482,7 @@ const CategoryDrawer = ({ open, onClose, onJump }) => {
                 <p className="text-[12px] text-white/80">Find what you need</p>
               </div>
             </div>
-            <button
-              ref={closeRef}
-              type="button"
-              onClick={onClose}
-              aria-label="Close menu"
-              className="flex h-9 w-9 items-center justify-center rounded-full bg-white/20 transition-colors hover:bg-white/30 focus-visible:outline focus-visible:outline-2 focus-visible:outline-white"
-            >
+            <button ref={closeRef} type="button" onClick={onClose} aria-label="Close menu" className="flex h-9 w-9 items-center justify-center rounded-full bg-white/20 transition-colors hover:bg-white/30 focus-visible:outline focus-visible:outline-2 focus-visible:outline-white">
               <FiX className="h-5 w-5" />
             </button>
           </div>
@@ -266,20 +500,17 @@ const CategoryDrawer = ({ open, onClose, onJump }) => {
           </div>
         </div>
 
-        {/* Scrollable body */}
         <div className="no-scrollbar flex-1 overflow-y-auto overscroll-contain px-3 py-4">
-          <p className="mb-2 px-2.5 text-[11px] font-bold uppercase tracking-wider text-gray-400">Categories</p>
+          <DrawerLabel first>Categories</DrawerLabel>
           {filtered.length > 0 ? (
             <CategoryList items={filtered} variant="drawer" onNavigate={onClose} />
           ) : (
-            <p className="rounded-xl bg-gray-50 px-3 py-6 text-center text-[13px] text-gray-500">
-              No categories match &ldquo;{query}&rdquo;.
-            </p>
+            <p className="rounded-xl bg-gray-50 px-3 py-6 text-center text-[13px] text-gray-500">No categories match &ldquo;{query}&rdquo;. Try a shorter word.</p>
           )}
 
           {!query && (
             <>
-              <p className="mb-2 mt-6 px-2.5 text-[11px] font-bold uppercase tracking-wider text-gray-400">Explore</p>
+              <DrawerLabel>Explore</DrawerLabel>
               <div className="grid grid-cols-2 gap-2">
                 {QUICK_LINKS.map(({ id, label, icon: Icon }) => (
                   <button
@@ -294,15 +525,10 @@ const CategoryDrawer = ({ open, onClose, onJump }) => {
                 ))}
               </div>
 
-              <p className="mb-2 mt-6 px-2.5 text-[11px] font-bold uppercase tracking-wider text-gray-400">Top brands</p>
+              <DrawerLabel>Top brands</DrawerLabel>
               <div className="flex flex-wrap gap-2 px-1">
                 {BRANDS.map((name) => (
-                  <Link
-                    key={name}
-                    to="/shop"
-                    onClick={onClose}
-                    className="rounded-full border border-gray-200 px-3.5 py-1.5 text-[12.5px] font-bold text-gray-600 transition-colors hover:border-[#FF6C00] hover:text-[#FF6C00]"
-                  >
+                  <Link key={name} to="/shop" onClick={onClose} className="rounded-full border border-gray-200 px-3.5 py-1.5 text-[12.5px] font-bold text-gray-600 transition-colors hover:border-[#FF6C00] hover:text-[#FF6C00]">
                     {name}
                   </Link>
                 ))}
@@ -311,21 +537,11 @@ const CategoryDrawer = ({ open, onClose, onJump }) => {
           )}
         </div>
 
-        {/* Footer actions */}
         <div className="flex-shrink-0 space-y-2 border-t border-gray-100 bg-white px-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] pt-3">
-          <Link
-            to="/shop"
-            onClick={onClose}
-            className="flex items-center justify-center gap-2 rounded-xl bg-[#0B1B33] py-3 text-[14px] font-bold text-white transition-colors hover:bg-[#FF6C00]"
-          >
+          <Link to="/shop" onClick={onClose} className="flex items-center justify-center gap-2 rounded-xl bg-[#0B1B33] py-3 text-[14px] font-bold text-white transition-colors hover:bg-[#FF6C00]">
             Browse all products <ArrowRight className="h-4 w-4" />
           </Link>
-          <a
-            href={waLink()}
-            target="_blank"
-            rel="noreferrer"
-            className="flex items-center justify-center gap-2 rounded-xl bg-[#25D366]/10 py-3 text-[14px] font-bold text-[#1DA851] transition-colors hover:bg-[#25D366] hover:text-white"
-          >
+          <a href={waLink()} target="_blank" rel="noreferrer" className="flex items-center justify-center gap-2 rounded-xl bg-[#25D366]/10 py-3 text-[14px] font-bold text-[#1DA851] transition-colors hover:bg-[#25D366] hover:text-white">
             <FaWhatsapp className="h-5 w-5" /> Chat with us
           </a>
         </div>
@@ -337,17 +553,11 @@ const CategoryDrawer = ({ open, onClose, onJump }) => {
 /** App-style bottom tab bar (phones and tablets only). */
 const MobileTabBar = ({ cartCount, drawerOpen, onHome, onCategories }) => {
   const tab = (active) =>
-    `relative flex w-full flex-col items-center gap-0.5 py-2 text-[10.5px] font-semibold transition-colors ${
-      active ? 'text-[#FF6C00]' : 'text-gray-500 active:text-[#FF6C00]'
-    }`;
-  const indicator = (active) =>
-    active ? <span className="absolute inset-x-6 top-0 h-0.5 rounded-b bg-[#FF6C00]" /> : null;
+    `relative flex w-full flex-col items-center gap-0.5 py-2 text-[10.5px] font-semibold transition-colors ${active ? 'text-[#FF6C00]' : 'text-gray-500 active:text-[#FF6C00]'}`;
+  const indicator = (active) => (active ? <span className="absolute inset-x-6 top-0 h-0.5 rounded-b bg-[#FF6C00]" /> : null);
 
   return (
-    <nav
-      aria-label="Primary"
-      className="fixed inset-x-0 bottom-0 z-50 border-t border-gray-200 bg-white/95 pb-[env(safe-area-inset-bottom)] shadow-[0_-6px_24px_-12px_rgba(11,27,51,0.18)] backdrop-blur lg:hidden"
-    >
+    <nav aria-label="Primary" className="fixed inset-x-0 bottom-0 z-50 border-t border-gray-200 bg-white/95 pb-[env(safe-area-inset-bottom)] shadow-[0_-6px_24px_-12px_rgba(11,27,51,0.18)] backdrop-blur lg:hidden">
       <ul className="mx-auto grid max-w-lg grid-cols-5">
         <li>
           <button type="button" onClick={onHome} className={tab(!drawerOpen)} aria-current={!drawerOpen ? 'page' : undefined}>
@@ -398,7 +608,6 @@ const MobileTabBar = ({ cartCount, drawerOpen, onHome, onCategories }) => {
 /* -------------------------------------------------------------------------- */
 const Home = () => {
   const [activeTab, setActiveTab] = useState('BESTSELLERS');
-  const [timeLeft, setTimeLeft] = useState({ hours: 12, minutes: 34, seconds: 56 });
   const [heroSlide, setHeroSlide] = useState(0);
   const [showShareModal, setShowShareModal] = useState(false);
   const [shareProduct, setShareProduct] = useState(null);
@@ -408,6 +617,20 @@ const Home = () => {
   const toastTimer = useRef(null);
   const touchStartX = useRef(null);
   const { addToCart, cartItems } = useCart();
+  const [products, setProducts] = useState(fallbackProducts);
+  const [homeData, setHomeData] = useState(null);
+
+  useEffect(() => {
+    let active = true;
+    api.get('/settings/homepage').then(({ data }) => active && setHomeData(data)).catch(() => {});
+    api
+      .get('/products', { params: { limit: 200 } })
+      .then(({ data }) => {
+        if (active && data.products?.length) setProducts(data.products.map(toStoreProduct));
+      })
+      .catch(() => {});
+    return () => { active = false; };
+  }, []);
 
   const cartCount = (cartItems || []).reduce((sum, item) => sum + (Number(item.quantity) || 0), 0);
   const canNativeShare = typeof navigator !== 'undefined' && typeof navigator.share === 'function';
@@ -439,19 +662,13 @@ const Home = () => {
   };
 
   const getProductUrl = () => (shareProduct ? `${window.location.origin}/product/${shareProduct.id}` : '');
-  const shareText = () => encodeURIComponent(`Check out ${shareProduct?.name ?? ''}`);
   const openShare = (url) => window.open(url, '_blank', 'noopener,noreferrer');
-  const shareOnWhatsapp = () => {
-    openShare(`https://wa.me/?text=${encodeURIComponent(`Check out ${shareProduct?.name ?? ''} ${getProductUrl()}`)}`);
-    setShowShareModal(false);
-  };
-  const shareOnFacebook = () => openShare(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(getProductUrl())}`);
-  const shareOnTwitter = () => openShare(`https://twitter.com/intent/tweet?url=${encodeURIComponent(getProductUrl())}&text=${shareText()}`);
-  const shareOnLinkedIn = () => openShare(`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(getProductUrl())}`);
-  const shareOnTelegram = () => openShare(`https://t.me/share/url?url=${encodeURIComponent(getProductUrl())}&text=${shareText()}`);
+  const shareLabel = () => `Check out ${shareProduct?.name ?? ''}`;
+  const enc = encodeURIComponent;
+
   const shareNative = async () => {
     try {
-      await navigator.share({ title: shareProduct.name, text: `Check out ${shareProduct.name}`, url: getProductUrl() });
+      await navigator.share({ title: shareProduct.name, text: shareLabel(), url: getProductUrl() });
       setShowShareModal(false);
     } catch (e) {
       /* dismissed by the user */
@@ -467,12 +684,19 @@ const Home = () => {
     }
   };
 
+  const shareTargets = [
+    { label: 'WhatsApp', icon: FaWhatsapp, color: 'text-[#25D366]', onClick: () => { openShare(`https://wa.me/?text=${enc(`${shareLabel()} ${getProductUrl()}`)}`); setShowShareModal(false); } },
+    { label: 'Facebook', icon: FaFacebook, color: 'text-[#1877F2]', onClick: () => openShare(`https://www.facebook.com/sharer/sharer.php?u=${enc(getProductUrl())}`) },
+    { label: 'Twitter', icon: FaTwitter, color: 'text-[#1DA1F2]', onClick: () => openShare(`https://twitter.com/intent/tweet?url=${enc(getProductUrl())}&text=${enc(shareLabel())}`) },
+    { label: 'LinkedIn', icon: FaLinkedin, color: 'text-[#0A66C2]', onClick: () => openShare(`https://www.linkedin.com/sharing/share-offsite/?url=${enc(getProductUrl())}`) },
+    { label: 'Telegram', icon: FaTelegram, color: 'text-[#229ED9]', onClick: () => openShare(`https://t.me/share/url?url=${enc(getProductUrl())}&text=${enc(shareLabel())}`) },
+    { label: copied ? 'Copied' : 'Copy link', icon: copied ? FiCheck : FiShare2, color: copied ? 'text-emerald-600' : 'text-gray-600', onClick: copyLink },
+    ...(canNativeShare ? [{ label: 'More…', icon: FiMoreHorizontal, color: 'text-gray-600', onClick: shareNative }] : []),
+  ];
+
   const jumpTo = (id) => {
     setDrawerOpen(false);
-    window.setTimeout(() => {
-      const el = document.getElementById(id);
-      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }, 250);
+    window.setTimeout(() => document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 250);
   };
 
   /* --- Overlays: lock scroll, close on Escape, close drawer on desktop resize --- */
@@ -494,94 +718,43 @@ const Home = () => {
   }, [drawerOpen, showShareModal]);
 
   useEffect(() => {
-    const onResize = () => {
-      if (window.innerWidth >= 1024) setDrawerOpen(false);
-    };
+    const onResize = () => window.innerWidth >= 1024 && setDrawerOpen(false);
     window.addEventListener('resize', onResize);
     return () => window.removeEventListener('resize', onResize);
   }, []);
 
-  /* --- Countdown --- */
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setTimeLeft((prev) => {
-        if (prev.seconds > 0) return { ...prev, seconds: prev.seconds - 1 };
-        if (prev.minutes > 0) return { ...prev, minutes: prev.minutes - 1, seconds: 59 };
-        if (prev.hours > 0) return { hours: prev.hours - 1, minutes: 59, seconds: 59 };
-        return prev;
-      });
-    }, 1000);
-    return () => clearInterval(timer);
-  }, []);
-
-  /* --- Data --- */
+  /* --- Data (rebuilt when products arrive from the API) --- */
   const heroSlides = useMemo(() => {
-    const pick = (id) => products.find((p) => p.id === id) || products[0];
-    const pctOf = (p) => (p.oldPrice && p.oldPrice > p.price ? Math.round((1 - p.price / p.oldPrice) * 100) : 0);
-    const tv = pick(13);
-    const fridge = pick(23);
-    const speaker = pick(3);
-    return [
-      {
-        tag: 'Limited offer',
-        title: tv.name,
-        highlight: 'Cinema-sized 4K for your living room',
-        desc: tv.description,
-        rating: tv.rating,
-        reviews: '2,480 reviews',
-        price: formatMoney(tv.price),
-        oldPrice: tv.oldPrice ? formatMoney(tv.oldPrice) : null,
-        pct: pctOf(tv),
-        cta: 'Shop this TV',
-        link: `/product/${tv.id}`,
-        image: tv.image,
-        bg: 'from-[#FFF3E6] via-[#FFE6D0] to-[#FFD5B0]',
-        thumbLabel: 'TV deals',
-      },
-      {
-        tag: 'New arrival',
-        title: fridge.name,
-        highlight: 'Premium cooling for a modern kitchen',
-        desc: fridge.description,
-        rating: fridge.rating,
-        reviews: '1,920 reviews',
-        price: formatMoney(fridge.price),
-        oldPrice: fridge.oldPrice ? formatMoney(fridge.oldPrice) : null,
-        pct: pctOf(fridge),
-        cta: 'Shop refrigerators',
-        link: `/product/${fridge.id}`,
-        image: fridge.image,
-        bg: 'from-[#EEF5FF] via-[#DFEBFF] to-[#CBDDFF]',
-        thumbLabel: 'Home appliances',
-      },
-      {
-        tag: 'Audio week',
-        title: speaker.name,
-        highlight: 'Immersive sound, zero compromise',
-        desc: speaker.description,
-        rating: speaker.rating,
-        reviews: '3,110 reviews',
-        price: formatMoney(speaker.price),
-        oldPrice: speaker.oldPrice ? formatMoney(speaker.oldPrice) : null,
-        pct: pctOf(speaker),
-        cta: 'Shop audio',
-        link: `/product/${speaker.id}`,
-        image: speaker.image,
-        bg: 'from-[#F4F0FF] via-[#E9E2FF] to-[#D9CEFF]',
-        thumbLabel: 'Audio',
-      },
-    ];
-  }, []);
+    const find = (id) => products.find((p) => String(p.id) === String(id)) || products[0];
+    return HERO_CONFIG.map((c) => {
+      const p = find(c.id);
+      const pct = p.oldPrice && p.oldPrice > p.price ? Math.round((1 - p.price / p.oldPrice) * 100) : 0;
+      return {
+        ...c,
+        title: p.name,
+        price: formatMoney(p.price),
+        oldPrice: p.oldPrice ? formatMoney(p.oldPrice) : null,
+        pct,
+        link: `/product/${p.id}`,
+        image: p.image,
+      };
+    });
+  }, [products]);
+
+  const heroBanners = useMemo(() => {
+    const find = (id) => products.find((p) => String(p.id) === String(id)) || products[0];
+    return BANNER_CONFIG.map((b) => {
+      const p = find(b.id);
+      return { ...b, link: `/product/${p.id}`, image: p.image };
+    });
+  }, [products]);
 
   useEffect(() => {
     const slider = setInterval(() => setHeroSlide((p) => (p + 1) % heroSlides.length), 7000);
     return () => clearInterval(slider);
   }, [heroSlide, heroSlides.length]);
 
-  /* Swipe left / right on the hero carousel */
-  const onHeroTouchStart = (e) => {
-    touchStartX.current = e.touches[0].clientX;
-  };
+  const onHeroTouchStart = (e) => { touchStartX.current = e.touches[0].clientX; };
   const onHeroTouchEnd = (e) => {
     if (touchStartX.current === null) return;
     const dx = e.changedTouches[0].clientX - touchStartX.current;
@@ -590,43 +763,36 @@ const Home = () => {
     setHeroSlide((p) => (p + (dx < 0 ? 1 : -1) + heroSlides.length) % heroSlides.length);
   };
 
-  const featured = products.filter((item) => item.featured);
+  const featuredSource = useMemo(
+    () => (homeData?.featured?.length ? homeData.featured.map(toStoreProduct) : products.filter((item) => item.featured)),
+    [homeData, products]
+  );
+
   const tabbedProducts = useMemo(() => {
-    let list = featured;
-    if (activeTab === 'BESTSELLERS') list = featured.filter((p) => p.badge === 'BESTSELLER');
-    if (activeTab === 'TRENDING') list = featured.filter((p) => p.badge === 'HOT' || p.badge === 'SALE');
-    if (list.length < 4) list = featured; // fall back so the grid is never empty
+    let list = featuredSource;
+    if (activeTab === 'BESTSELLERS') list = featuredSource.filter((p) => p.isBestseller || p.badge === 'BESTSELLER');
+    if (activeTab === 'TRENDING') list = featuredSource.filter((p) => p.isHot || p.badge === 'HOT' || p.badge === 'SALE');
+    if (list.length < 4) list = featuredSource;
     return list.slice(0, 10);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeTab]);
+  }, [activeTab, featuredSource]);
 
   const badgeFor = (p) => {
-    if (p.badge === 'BESTSELLER') return { label: 'Bestseller', cls: 'bg-[#0B1B33]' };
-    if (p.badge === 'HOT') return { label: 'Hot', cls: 'bg-red-500' };
-    if (p.badge === 'NEW' || p.badge === 'SALE') return { label: 'New', cls: 'bg-emerald-500' };
+    if (p.isBestseller || p.badge === 'BESTSELLER') return { label: 'Bestseller', cls: 'bg-[#0B1B33]' };
+    if (p.isHot || p.badge === 'HOT') return { label: 'Hot', cls: 'bg-red-500' };
+    if (p.isNewArrival || p.isNew || p.badge === 'NEW' || p.badge === 'SALE') return { label: 'New', cls: 'bg-emerald-500' };
     return null;
   };
 
+  const dealSource = homeData?.deal
+    ? toStoreProduct(homeData.deal)
+    : products.find((item) => item.dealOfTheDay) || products.find((item) => item.id === 24) || products[0];
   const dealOfTheDay = {
-    ...(products.find((item) => item.id === 24) || products[0]),
-    sold: 156,
-    available: 44,
+    ...dealSource,
+    sold: dealSource.dealSold !== undefined ? dealSource.dealSold : 156,
+    available: dealSource.dealAvailable !== undefined ? dealSource.dealAvailable : 44,
   };
-  const dealPct = dealOfTheDay.oldPrice
-    ? Math.round(((dealOfTheDay.oldPrice - dealOfTheDay.price) / dealOfTheDay.oldPrice) * 100)
-    : 0;
-  const flashSaleProducts = getDiscountedProducts().slice(0, 4);
-  const newArrivals = products.slice(-6);
-
-  const heroBanners = useMemo(() => {
-    const pick = (id) => products.find((p) => p.id === id) || products[0];
-    const a = pick(11);
-    const b = pick(16);
-    return [
-      { tag: 'Up to 40% off', title: 'Smart TV deals', sub: 'Big screens, sharper picture', cta: 'Shop TVs', link: `/product/${a.id}`, image: a.image, overlay: 'from-[#FF7A1A]/95 via-[#E85D04]/85 to-[#B84500]/70' },
-      { tag: 'Free delivery', title: 'Home appliances', sub: 'Upgrade your kitchen today', cta: 'Shop now', link: `/product/${b.id}`, image: b.image, overlay: 'from-[#0B1B33]/95 via-[#16315C]/85 to-[#1E4F8F]/70' },
-    ];
-  }, []);
+  const dealsOfTheDay = homeData?.flash?.length ? homeData.flash.map(toStoreProduct) : getDiscountedProducts().slice(0, 4);
+  const newArrivals = homeData?.newArrivals?.length ? homeData.newArrivals.map(toStoreProduct) : products.slice(-6);
 
   return (
     <div
@@ -649,11 +815,7 @@ const Home = () => {
 
         {/* ================= MOBILE CATEGORY STRIP ================= */}
         <nav aria-label="Categories" className="no-scrollbar -mx-4 mb-4 flex gap-3 overflow-x-auto px-4 pb-1 lg:hidden">
-          <button
-            type="button"
-            onClick={() => setDrawerOpen(true)}
-            className="flex w-[68px] flex-shrink-0 flex-col items-center gap-1.5 active:scale-95"
-          >
+          <button type="button" onClick={() => setDrawerOpen(true)} className="flex w-[68px] flex-shrink-0 flex-col items-center gap-1.5 active:scale-95">
             <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-[#FF6C00] to-[#FF8A2B] text-white shadow-md shadow-orange-500/30">
               <LayoutGrid className="h-6 w-6" strokeWidth={2} />
             </span>
@@ -673,10 +835,7 @@ const Home = () => {
         <div className="mb-8 grid grid-cols-1 gap-3 lg:h-[460px] lg:grid-cols-12">
 
           {/* ---- Desktop sidebar ---- */}
-          <aside
-            aria-label="Shop by category"
-            className="hidden flex-col overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-[0_4px_20px_-8px_rgba(11,27,51,0.12)] lg:col-span-3 lg:flex"
-          >
+          <aside aria-label="Shop by category" className="hidden flex-col overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-[0_4px_20px_-8px_rgba(11,27,51,0.12)] lg:col-span-3 lg:flex">
             <div className="flex items-center gap-3 bg-gradient-to-r from-[#FF6C00] to-[#FF8A2B] px-4 py-3.5 text-white">
               <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-white/20">
                 <LayoutGrid className="h-5 w-5" strokeWidth={2.2} />
@@ -686,9 +845,7 @@ const Home = () => {
                 <p className="text-[11px] text-white/80">{CATEGORIES.length} categories to explore</p>
               </div>
             </div>
-
             <CategoryList items={CATEGORIES} variant="sidebar" />
-
             <Link to="/shop" className="flex items-center justify-between border-t border-gray-100 bg-gray-50 px-4 py-3 text-[13px] font-bold text-[#0B1B33] transition-colors hover:bg-[#0B1B33] hover:text-white">
               Browse all products
               <ArrowRight className="h-4 w-4" />
@@ -705,27 +862,16 @@ const Home = () => {
             onTouchEnd={onHeroTouchEnd}
           >
             {heroSlides.map((s, idx) => (
-              <div
-                key={idx}
-                aria-hidden={idx !== heroSlide}
-                className={`absolute inset-0 transition-opacity duration-1000 ${idx === heroSlide ? 'z-10 opacity-100' : 'pointer-events-none z-0 opacity-0'}`}
-              >
+              <div key={idx} aria-hidden={idx !== heroSlide} className={`absolute inset-0 transition-opacity duration-1000 ${idx === heroSlide ? 'z-10 opacity-100' : 'pointer-events-none z-0 opacity-0'}`}>
                 <img src={s.image} alt="" aria-hidden="true" className="absolute inset-0 h-full w-full scale-150 object-cover blur-3xl brightness-95 saturate-150" />
                 <div className="absolute inset-0 bg-gradient-to-r from-[#0B1B33] via-[#0B1B33]/75 to-[#0B1B33]/20" />
-                <div
-                  className="absolute inset-0 opacity-40"
-                  style={{ backgroundImage: 'radial-gradient(rgba(255,255,255,0.12) 1px, transparent 1px)', backgroundSize: '20px 20px' }}
-                />
+                <div className="absolute inset-0 opacity-40" style={{ backgroundImage: 'radial-gradient(rgba(255,255,255,0.12) 1px, transparent 1px)', backgroundSize: '20px 20px' }} />
                 <div className="absolute -bottom-24 right-[8%] h-64 w-64 rounded-full bg-[#FF6C00]/40 blur-3xl" />
 
                 {/* Product */}
                 <div className="absolute inset-x-4 top-3 flex h-[44%] items-center justify-center sm:inset-x-auto sm:bottom-12 sm:right-[76px] sm:top-4 sm:h-auto sm:w-[52%]">
                   <div className="absolute aspect-square h-[98%] rounded-full bg-gradient-to-br from-white/25 to-white/5 ring-1 ring-white/25" />
-                  <img
-                    src={s.image}
-                    alt={s.title}
-                    className={`relative max-h-full max-w-full object-contain drop-shadow-[0_32px_36px_rgba(0,0,0,0.55)] transition-transform duration-[7000ms] ease-out ${idx === heroSlide ? 'scale-110' : 'scale-100'}`}
-                  />
+                  <img src={s.image} alt={s.title} className={`relative max-h-full max-w-full object-contain drop-shadow-[0_32px_36px_rgba(0,0,0,0.55)] transition-transform duration-[7000ms] ease-out ${idx === heroSlide ? 'scale-110' : 'scale-100'}`} />
                   {s.pct > 0 && (
                     <div className="absolute -right-1 top-0 flex h-[64px] w-[64px] flex-col items-center justify-center rounded-full bg-[#FF6C00] text-white shadow-xl shadow-orange-500/40 ring-4 ring-white/20 sm:h-[70px] sm:w-[70px]">
                       <span className="text-[10px] font-semibold leading-none">Save</span>
@@ -749,15 +895,10 @@ const Home = () => {
                       {s.oldPrice && <span className="pb-0.5 text-[13px] text-white/45 line-through">{s.oldPrice}</span>}
                     </div>
 
-                    <div className="mt-4 flex items-center gap-3">
-                      <Link
-                        to={s.link}
-                        className="inline-flex items-center gap-2 rounded-lg bg-[#FF6C00] px-5 py-2.5 text-[13px] font-bold text-white shadow-lg shadow-orange-500/30 transition-colors hover:bg-[#E65C00] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
-                      >
-                        {s.cta}
-                        <ArrowRight className="h-4 w-4" />
-                      </Link>
-                    </div>
+                    <Link to={s.link} className="mt-4 inline-flex items-center gap-2 rounded-lg bg-[#FF6C00] px-5 py-2.5 text-[13px] font-bold text-white shadow-lg shadow-orange-500/30 transition-colors hover:bg-[#E65C00] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white">
+                      {s.cta}
+                      <ArrowRight className="h-4 w-4" />
+                    </Link>
 
                     <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-[11.5px] font-medium text-white/70">
                       <span className="flex items-center gap-1.5"><Truck className="h-3.5 w-3.5 text-[#FF9A4D]" /> Free delivery</span>
@@ -779,9 +920,7 @@ const Home = () => {
                   className={`relative flex h-[58px] w-[58px] items-center justify-center overflow-hidden rounded-xl bg-white p-1.5 transition-all ${dot === heroSlide ? 'scale-105 ring-2 ring-[#FF6C00]' : 'opacity-70 ring-1 ring-white/40 hover:opacity-100'}`}
                 >
                   <img src={s.image} alt="" className="max-h-full max-w-full object-contain" />
-                  {dot === heroSlide && (
-                    <span key={heroSlide} className="absolute bottom-0 left-0 h-[3px] bg-[#FF6C00] [animation:heroProgress_7s_linear_forwards]" />
-                  )}
+                  {dot === heroSlide && <span key={heroSlide} className="absolute bottom-0 left-0 h-[3px] bg-[#FF6C00] [animation:heroProgress_7s_linear_forwards]" />}
                 </button>
               ))}
             </div>
@@ -793,7 +932,6 @@ const Home = () => {
                 <span className="text-white/40"> / {String(heroSlides.length).padStart(2, '0')}</span>
               </span>
 
-              {/* Dots (phones) */}
               <div className="flex items-center gap-1.5 sm:hidden" role="tablist" aria-label="Choose slide">
                 {heroSlides.map((s, dot) => (
                   <button
@@ -809,20 +947,10 @@ const Home = () => {
               </div>
 
               <div className="flex items-center gap-1.5 sm:mr-[68px]">
-                <button
-                  type="button"
-                  aria-label="Previous slide"
-                  onClick={() => setHeroSlide((p) => (p - 1 + heroSlides.length) % heroSlides.length)}
-                  className="flex h-8 w-8 items-center justify-center rounded-full bg-white/15 text-white ring-1 ring-white/25 backdrop-blur transition-colors hover:bg-[#FF6C00]"
-                >
+                <button type="button" aria-label="Previous slide" onClick={() => setHeroSlide((p) => (p - 1 + heroSlides.length) % heroSlides.length)} className="flex h-8 w-8 items-center justify-center rounded-full bg-white/15 text-white ring-1 ring-white/25 backdrop-blur transition-colors hover:bg-[#FF6C00]">
                   <ChevronLeft className="h-4 w-4" />
                 </button>
-                <button
-                  type="button"
-                  aria-label="Next slide"
-                  onClick={() => setHeroSlide((p) => (p + 1) % heroSlides.length)}
-                  className="flex h-8 w-8 items-center justify-center rounded-full bg-white/15 text-white ring-1 ring-white/25 backdrop-blur transition-colors hover:bg-[#FF6C00]"
-                >
+                <button type="button" aria-label="Next slide" onClick={() => setHeroSlide((p) => (p + 1) % heroSlides.length)} className="flex h-8 w-8 items-center justify-center rounded-full bg-white/15 text-white ring-1 ring-white/25 backdrop-blur transition-colors hover:bg-[#FF6C00]">
                   <ChevronRight className="h-4 w-4" />
                 </button>
               </div>
@@ -832,11 +960,7 @@ const Home = () => {
           {/* ---- Right: banners (swipe row on phones) ---- */}
           <div className="no-scrollbar -mx-4 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 sm:mx-0 sm:grid sm:grid-cols-2 sm:overflow-visible sm:px-0 lg:col-span-3 lg:grid-cols-1 lg:grid-rows-2">
             {heroBanners.map((b) => (
-              <Link
-                key={b.title}
-                to={b.link}
-                className="group relative flex min-h-[180px] w-[84%] flex-shrink-0 snap-start overflow-hidden rounded-2xl bg-[#0B1B33] shadow-[0_4px_20px_-8px_rgba(11,27,51,0.25)] sm:w-auto lg:min-h-0"
-              >
+              <Link key={b.title} to={b.link} className="group relative flex min-h-[180px] w-[84%] flex-shrink-0 snap-start overflow-hidden rounded-2xl bg-[#0B1B33] shadow-[0_4px_20px_-8px_rgba(11,27,51,0.25)] sm:w-auto lg:min-h-0">
                 <img src={b.image} alt="" aria-hidden="true" className="absolute inset-0 h-full w-full scale-125 object-cover blur-xl brightness-90 saturate-125" />
                 <div className={`absolute inset-0 bg-gradient-to-br ${b.overlay}`} />
                 <div className="absolute -right-10 -top-10 h-36 w-36 rounded-full bg-white/10" />
@@ -858,38 +982,15 @@ const Home = () => {
         </div>
 
         {/* ================= SERVICE FEATURES ================= */}
-        <div className="mb-10 grid grid-cols-2 gap-1 rounded-2xl border border-gray-200 bg-white p-1.5 shadow-sm sm:gap-3 sm:p-2 lg:grid-cols-4">
-          {[
-            { icon: Truck, title: 'Free shipping', desc: `On orders over ${formatMoney(FREE_SHIPPING_THRESHOLD)}`, color: 'bg-orange-50 text-[#FF6C00]' },
-            { icon: RotateCcw, title: 'Easy returns', desc: '30-day money back', color: 'bg-emerald-50 text-emerald-600' },
-            { icon: ShieldCheck, title: 'Secure payment', desc: '100% safe and encrypted', color: 'bg-blue-50 text-blue-600' },
-            { icon: Headphones, title: '24/7 support', desc: 'Expert help anytime', color: 'bg-purple-50 text-purple-600' },
-          ].map(({ icon: Icon, title, desc, color }) => (
-            <div key={title} className="flex items-center gap-3 rounded-xl p-2.5 sm:p-4">
-              <span className={`flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl sm:h-11 sm:w-11 ${color}`}>
-                <Icon className="h-5 w-5" strokeWidth={1.8} />
-              </span>
-              <div className="min-w-0">
-                <h4 className="truncate text-[13px] font-bold text-[#0B1B33] sm:text-[13.5px]">{title}</h4>
-                <p className="truncate text-[11.5px] text-gray-500 sm:text-[12px]">{desc}</p>
-              </div>
-            </div>
-          ))}
-        </div>
+        <ServiceFeatures freeShippingText={`On orders over ${formatMoney(FREE_SHIPPING_THRESHOLD)}`} />
 
         {/* ================= DEALS OF THE DAY ================= */}
         <section id="deals" className="mb-12 scroll-mt-4">
           <SectionHeader icon={Flame} title="Deals of the day" subtitle="Up to 30% off selected items" action={{ to: '/shop', label: 'View all deals' }} />
           <ScrollRow className="md:grid-cols-4">
-            {flashSaleProducts.map((product) => (
+            {dealsOfTheDay.map((product) => (
               <RowItem key={product.id}>
-                <ProductCard
-                  product={product}
-                  badge={{ label: 'Deal', cls: 'bg-red-500' }}
-                  onAdd={handleAddToCart}
-                  onWhatsapp={handleBuyOnWhatsapp}
-                  onShare={handleShareProduct}
-                />
+                <ProductCard product={product} badge={{ label: 'Deal', cls: 'bg-red-500' }} onAdd={handleAddToCart} onWhatsapp={handleBuyOnWhatsapp} onShare={handleShareProduct} />
               </RowItem>
             ))}
           </ScrollRow>
@@ -897,12 +998,7 @@ const Home = () => {
 
         {/* ================= PROMO BANNERS ================= */}
         <ScrollRow className="mb-12 md:grid-cols-2 lg:grid-cols-4">
-          {[
-            { title: 'Home appliance deals', sub: 'New arrivals', img: '/images/products/product-16.jpg', bg: 'from-[#1E73BE] to-[#154F85]' },
-            { title: 'Entertainment mega sale', sub: 'Up to 50% off', img: '/images/products/product-13.jpg', bg: 'from-[#FF7A1A] to-[#D94F00]' },
-            { title: 'Audio & speakers', sub: 'Free shipping', img: '/images/products/product-03.jpg', bg: 'from-[#1F2A44] to-[#0B1B33]' },
-            { title: 'Smart TVs', sub: 'Limited time', img: '/images/products/product-11.jpg', bg: 'from-[#6D3BD8] to-[#4A22A8]' },
-          ].map((b) => (
+          {PROMO_BANNERS.map((b) => (
             <RowItem key={b.title} className="w-[82%] max-w-[340px]">
               <Link to="/shop" className={`group relative flex h-[160px] w-full items-center overflow-hidden rounded-2xl bg-gradient-to-br ${b.bg} p-5 transition-shadow hover:shadow-xl sm:h-[170px] sm:p-6`}>
                 <div className="relative z-10 max-w-[58%]">
@@ -920,73 +1016,15 @@ const Home = () => {
           ))}
         </ScrollRow>
 
-        {/* ================= DEAL SPOTLIGHT ================= */}
-        <section id="flash" className="mb-12 scroll-mt-4">
-          <SectionHeader icon={FiZap} title="Flash sale spotlight" subtitle="Limited stock, today only">
-            <div className="flex items-center gap-1.5 sm:gap-2" role="timer" aria-label="Time left on this deal">
-              <span className="mr-1 text-[13px] font-medium text-gray-500">Ends in</span>
-              {Object.entries(timeLeft).map(([unit, value]) => (
-                <div key={unit} className="min-w-[48px] rounded-xl bg-[#0B1B33] px-2.5 py-2 text-center text-white sm:min-w-[54px] sm:px-3">
-                  <div className="text-[17px] font-bold tabular-nums leading-none sm:text-[18px]">{String(value).padStart(2, '0')}</div>
-                  <div className="mt-1 text-[10px] capitalize text-white/60">{unit}</div>
-                </div>
-              ))}
-            </div>
-          </SectionHeader>
-
-          <div className="grid items-stretch overflow-hidden rounded-3xl border border-gray-200 bg-white shadow-sm lg:grid-cols-2">
-            <div className="flex items-center justify-center bg-gradient-to-br from-[#FFF1E6] to-[#FFE0C7] p-5 sm:p-8">
-              <div className="relative flex h-[240px] w-full max-w-[360px] items-center justify-center rounded-3xl bg-white/80 p-6 sm:h-[300px]">
-                {dealPct > 0 && (
-                  <span className="absolute left-4 top-4 rounded-full bg-red-500 px-3 py-1 text-[12px] font-bold text-white">Save {dealPct}%</span>
-                )}
-                <img src={dealOfTheDay.image} alt={dealOfTheDay.name} className="max-h-full max-w-full object-contain mix-blend-multiply drop-shadow-xl" />
-              </div>
-            </div>
-
-            <div className="flex flex-col justify-center p-5 sm:p-8">
-              <Link to={`/product/${dealOfTheDay.id}`} className="text-[22px] font-extrabold leading-tight text-[#0B1B33] hover:text-[#FF6C00] sm:text-[24px]">
-                {dealOfTheDay.name}
-              </Link>
-              <p className="mt-2 line-clamp-3 text-[14px] leading-relaxed text-gray-600">{dealOfTheDay.description}</p>
-
-              <div className="mt-5 flex items-baseline gap-3">
-                <span className="text-[32px] font-black leading-none text-[#D94F00] sm:text-[38px]">{formatMoney(dealOfTheDay.price)}</span>
-                {dealOfTheDay.oldPrice && <span className="text-[18px] text-gray-400 line-through sm:text-[20px]">{formatMoney(dealOfTheDay.oldPrice)}</span>}
-              </div>
-
-              <div className="mt-5">
-                <div className="mb-2 flex justify-between text-[13px] text-gray-600">
-                  <span>Sold <b className="text-[#0B1B33]">{dealOfTheDay.sold}</b></span>
-                  <span>Left <b className="text-emerald-600">{dealOfTheDay.available}</b></span>
-                </div>
-                <div className="h-2.5 w-full overflow-hidden rounded-full bg-gray-200">
-                  <div
-                    className="h-full rounded-full bg-gradient-to-r from-[#FF9A4D] to-[#FF6C00]"
-                    style={{ width: `${(dealOfTheDay.sold / (dealOfTheDay.sold + dealOfTheDay.available)) * 100}%` }}
-                  />
-                </div>
-              </div>
-
-              <div className="mt-6 flex flex-wrap gap-3">
-                <button
-                  type="button"
-                  onClick={() => handleAddToCart(dealOfTheDay)}
-                  className="flex min-w-[200px] flex-1 items-center justify-center gap-2 rounded-xl bg-[#FF6C00] px-6 py-3.5 text-[14px] font-bold text-white transition-colors hover:bg-[#E65C00] active:scale-[0.99]"
-                >
-                  <FiShoppingCart /> Add to cart
-                  {dealOfTheDay.oldPrice ? ` · save ${formatMoney(Number(dealOfTheDay.oldPrice) - Number(dealOfTheDay.price))}` : ''}
-                </button>
-                <button type="button" onClick={() => handleBuyOnWhatsapp(dealOfTheDay)} className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-[#25D366] px-5 py-3.5 text-[14px] font-bold text-white hover:bg-[#1DA851] sm:flex-none">
-                  <FaWhatsapp className="h-5 w-5" /> WhatsApp
-                </button>
-                <button type="button" onClick={() => handleShareProduct(dealOfTheDay)} aria-label="Share this deal" className="flex h-[50px] w-[50px] items-center justify-center rounded-xl bg-gray-100 text-gray-700 hover:bg-gray-200">
-                  <FiShare2 className="h-5 w-5" />
-                </button>
-              </div>
-            </div>
-          </div>
-        </section>
+        {/* ================= SUPER DEAL OF THE DAY ================= */}
+        <SuperDeal
+          id="flash"
+          product={dealOfTheDay}
+          onAdd={handleAddToCart}
+          onWhatsapp={handleBuyOnWhatsapp}
+          onShare={handleShareProduct}
+          formatMoney={formatMoney}
+        />
 
         {/* ================= BRANDS ================= */}
         <div className="no-scrollbar mb-12 flex items-center gap-x-8 overflow-x-auto rounded-2xl border border-gray-200 bg-white px-6 py-5 shadow-sm md:flex-wrap md:justify-between md:gap-y-4 md:overflow-visible md:px-8 md:py-6">
@@ -1019,14 +1057,7 @@ const Home = () => {
 
           <div className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
             {tabbedProducts.map((product) => (
-              <ProductCard
-                key={product.id}
-                product={product}
-                badge={badgeFor(product)}
-                onAdd={handleAddToCart}
-                onWhatsapp={handleBuyOnWhatsapp}
-                onShare={handleShareProduct}
-              />
+              <ProductCard key={product.id} product={product} badge={badgeFor(product)} onAdd={handleAddToCart} onWhatsapp={handleBuyOnWhatsapp} onShare={handleShareProduct} />
             ))}
           </div>
         </section>
@@ -1037,10 +1068,7 @@ const Home = () => {
           <ScrollRow className="md:grid-cols-3 xl:grid-cols-6">
             {newArrivals.map((product) => (
               <RowItem key={product.id} className="w-[42%] min-w-[140px] max-w-[200px]">
-                <Link
-                  to={`/product/${product.id}`}
-                  className="group w-full rounded-2xl border border-gray-200 bg-white p-3 transition-all hover:border-orange-200 hover:shadow-lg"
-                >
+                <Link to={`/product/${product.id}`} className="group w-full rounded-2xl border border-gray-200 bg-white p-3 transition-all hover:border-orange-200 hover:shadow-lg">
                   <div className="relative mb-3 flex h-32 items-center justify-center overflow-hidden rounded-xl bg-[#F6F7F9]">
                     <span className="absolute left-2 top-2 rounded-full bg-purple-600 px-2 py-0.5 text-[10px] font-bold text-white">New</span>
                     <img src={product.image} alt={product.name} loading="lazy" className="max-h-full max-w-full object-contain p-2 mix-blend-multiply transition-transform duration-500 group-hover:scale-105" />
@@ -1101,15 +1129,7 @@ const Home = () => {
               <p className="line-clamp-2 text-[13px] font-medium text-gray-700">{shareProduct.name}</p>
             </div>
             <div className="grid grid-cols-3 gap-3">
-              {[
-                { label: 'WhatsApp', icon: FaWhatsapp, color: 'text-[#25D366]', onClick: shareOnWhatsapp },
-                { label: 'Facebook', icon: FaFacebook, color: 'text-[#1877F2]', onClick: shareOnFacebook },
-                { label: 'Twitter', icon: FaTwitter, color: 'text-[#1DA1F2]', onClick: shareOnTwitter },
-                { label: 'LinkedIn', icon: FaLinkedin, color: 'text-[#0A66C2]', onClick: shareOnLinkedIn },
-                { label: 'Telegram', icon: FaTelegram, color: 'text-[#229ED9]', onClick: shareOnTelegram },
-                { label: copied ? 'Copied' : 'Copy link', icon: copied ? FiCheck : FiShare2, color: copied ? 'text-emerald-600' : 'text-gray-600', onClick: copyLink },
-                ...(canNativeShare ? [{ label: 'More…', icon: FiMoreHorizontal, color: 'text-gray-600', onClick: shareNative }] : []),
-              ].map(({ label, icon: Icon, color, onClick }) => (
+              {shareTargets.map(({ label, icon: Icon, color, onClick }) => (
                 <button key={label} type="button" onClick={onClick} className="flex flex-col items-center gap-2 rounded-2xl border border-gray-100 p-3.5 transition-colors hover:border-orange-200 hover:bg-orange-50 active:bg-orange-100">
                   <Icon className={`h-7 w-7 ${color}`} />
                   <span className="text-[12px] font-medium text-gray-700">{label}</span>

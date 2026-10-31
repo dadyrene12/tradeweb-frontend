@@ -19,11 +19,20 @@ import Compare from './pages/Compare';
 import Blog from './pages/Blog';
 import Contact from './pages/Contact';
 import TrackOrder from './pages/TrackOrder';
+import AdminRoute from './components/AdminRoute';
+import AdminLayout from './pages/admin/AdminLayout';
+import AdminDashboard from './pages/admin/AdminDashboard';
+import AdminProducts from './pages/admin/AdminProducts';
+import AdminOrders from './pages/admin/AdminOrders';
+import AdminUsers from './pages/admin/AdminUsers';
+import AdminSettings from './pages/admin/AdminSettings';
+import AdminCategories from './pages/admin/AdminCategories';
 
 function AppContent() {
   const location = useLocation();
   const authPages = ['/login', '/register', '/verify-email', '/forgot-password', '/reset-password'];
-  const hideHeaderFooter = authPages.includes(location.pathname);
+  const isAdminPage = location.pathname.startsWith('/admin');
+  const hideHeaderFooter = authPages.includes(location.pathname) || isAdminPage;
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -45,6 +54,16 @@ function AppContent() {
           <Route path="/blog" element={<Blog />} />
           <Route path="/contact" element={<Contact />} />
           <Route path="/track" element={<TrackOrder />} />
+          <Route element={<AdminRoute />}>
+            <Route path="/admin" element={<AdminLayout />}>
+              <Route index element={<AdminDashboard />} />
+              <Route path="products" element={<AdminProducts />} />
+              <Route path="categories" element={<AdminCategories />} />
+              <Route path="orders" element={<AdminOrders />} />
+              <Route path="users" element={<AdminUsers />} />
+              <Route path="settings" element={<AdminSettings />} />
+            </Route>
+          </Route>
         </Routes>
       </main>
       {!hideHeaderFooter && <PreFooter />}

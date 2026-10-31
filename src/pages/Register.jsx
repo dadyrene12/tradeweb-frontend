@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import {
   FiAlertCircle,
@@ -70,6 +70,7 @@ const getPasswordStrength = (password) => {
 
 const Register = () => {
   const { register } = useAuth();
+  const navigate = useNavigate();
 
   const [form, setForm] = useState({
     name: '',
@@ -139,6 +140,13 @@ const Register = () => {
         password: form.password,
         acceptTerms: true,
       });
+
+      if (data.requiresVerification === false) {
+        toast.success('Account created. You can sign in now.');
+        navigate('/login', { replace: true, state: { email: form.email.trim(), verified: true } });
+        return;
+      }
+
       setSuccess({ email: form.email.trim(), emailSent: data.emailSent });
       toast.success('Account created. Check your email to verify it.');
     } catch (registerError) {
