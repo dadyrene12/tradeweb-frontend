@@ -1,32 +1,67 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { Link } from 'react-router-dom';
-import { FiShoppingCart, FiStar, FiZap, FiShare2, FiX, FiCheck } from 'react-icons/fi';
+import { FiShoppingCart, FiStar, FiZap, FiShare2, FiX, FiCheck, FiMoreHorizontal } from 'react-icons/fi';
 import { FaWhatsapp, FaFacebook, FaTwitter, FaLinkedin, FaTelegram } from 'react-icons/fa';
 import {
   Tv, WashingMachine, Refrigerator, CookingPot, Speaker, Blend, Flame, House,
   Headphones, ChevronRight, ChevronLeft, LayoutGrid, ArrowRight,
-  Truck, RotateCcw, ShieldCheck, Gift, Sparkles, MessageCircle,
+  Truck, RotateCcw, ShieldCheck, Gift, Sparkles, Search, Store, Zap,
 } from 'lucide-react';
 import { useCart } from '../context/CartContext';
-import products, { formatPrice, getDiscountedProducts } from '../data/products';
+import products, { getDiscountedProducts } from '../data/products';
 
-/* ---------- Design tokens ---------- */
-const BRAND = '#FF6C00';
-const BRAND_DARK = '#E65C00';
-const INK = '#0B1B33';
+/* -------------------------------------------------------------------------- */
+/*  Settings                                                                   */
+/* -------------------------------------------------------------------------- */
+// Optional: your store's WhatsApp number (digits only, with country code, e.g. 15551234567).
+// Leave empty and WhatsApp will ask the customer to pick a contact.
+const WHATSAPP_NUMBER = '';
+const waLink = (text) => `https://wa.me/${WHATSAPP_NUMBER}${text ? `?text=${encodeURIComponent(text)}` : ''}`;
 
-/* ---------- Small reusable pieces ---------- */
+const CART_ROUTE = '/cart';
+
+// Currency: Rwandan franc. Amounts are shown exactly as stored in your product data.
+const CURRENCY = 'FRW';
+const FREE_SHIPPING_THRESHOLD = 100000; // keep in sync with STORE.freeShippingThreshold in the cart page
+const formatMoney = (value) => `${CURRENCY} ${Math.round(Number(value) || 0).toLocaleString('en-US')}`;
+
+/* -------------------------------------------------------------------------- */
+/*  Static data                                                                */
+/* -------------------------------------------------------------------------- */
+const CATEGORIES = [
+  { name: 'Smart TVs', hint: '4K, QLED & streaming', link: '/shop?category=audio', icon: Tv },
+  { name: 'Washing Machines', hint: 'Front & top load', link: '/shop?category=appliances', icon: WashingMachine },
+  { name: 'Fridges & Freezers', hint: 'Cooling for every home', link: '/shop?category=appliances', icon: Refrigerator },
+  { name: 'Cooking Machines', hint: 'Cookers, ovens & more', link: '/shop?category=appliances', icon: CookingPot },
+  { name: 'Radio & Speakers', hint: 'Sound systems & audio', link: '/shop?category=audio', icon: Speaker },
+  { name: 'Blenders', hint: 'Smoothies & kitchen prep', link: '/shop?category=appliances', icon: Blend },
+  { name: 'Kettles & Jiko', hint: 'Heat & boil, fast', link: '/shop?category=appliances', icon: Flame },
+  { name: 'Home Essentials', hint: 'Everyday home needs', link: '/shop', icon: House },
+];
+
+const QUICK_LINKS = [
+  { id: 'deals', label: 'Deals of the day', icon: Flame },
+  { id: 'flash', label: 'Flash sale', icon: Zap },
+  { id: 'featured', label: 'Featured', icon: Gift },
+  { id: 'new', label: 'New arrivals', icon: Sparkles },
+];
+
+const BRANDS = ['Hisense', 'LG', 'Samsung', 'Haier', 'SPJ', 'Sayona', 'KING'];
+
+/* -------------------------------------------------------------------------- */
+/*  Small reusable pieces                                                      */
+/* -------------------------------------------------------------------------- */
 const SectionHeader = ({ icon: Icon, title, subtitle, action, children }) => (
-  <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
+  <div className="mb-5 flex flex-wrap items-end justify-between gap-3 sm:mb-6 sm:gap-4">
     <div className="flex items-center gap-3">
       {Icon && (
-        <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-orange-50 text-[#FF6C00]">
+        <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-orange-50 text-[#FF6C00] sm:h-11 sm:w-11">
           <Icon className="h-5 w-5" strokeWidth={2} />
         </span>
       )}
       <div>
-        <h2 className="text-[22px] font-extrabold leading-tight tracking-tight text-[#0B1B33] sm:text-[26px]">{title}</h2>
-        {subtitle && <p className="mt-0.5 text-[13px] text-gray-500">{subtitle}</p>}
+        <h2 className="text-[20px] font-extrabold leading-tight tracking-tight text-[#0B1B33] sm:text-[26px]">{title}</h2>
+        {subtitle && <p className="mt-0.5 text-[12.5px] text-gray-500 sm:text-[13px]">{subtitle}</p>}
       </div>
     </div>
     {children}
@@ -37,6 +72,19 @@ const SectionHeader = ({ icon: Icon, title, subtitle, action, children }) => (
       </Link>
     )}
   </div>
+);
+
+/** Horizontal snap-scroll row on phones that becomes a normal grid from `md` up. */
+const ScrollRow = ({ className = '', children }) => (
+  <div
+    className={`no-scrollbar -mx-4 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-2 sm:mx-0 sm:px-0 md:grid md:gap-4 md:overflow-visible md:pb-0 ${className}`}
+  >
+    {children}
+  </div>
+);
+
+const RowItem = ({ className = 'w-[46%] min-w-[150px] max-w-[240px]', children }) => (
+  <div className={`flex flex-shrink-0 snap-start md:w-auto md:min-w-0 md:max-w-none ${className}`}>{children}</div>
 );
 
 const Stars = ({ rating = 0, size = 'h-3.5 w-3.5' }) => (
@@ -51,26 +99,26 @@ const ProductCard = ({ product, onAdd, onWhatsapp, onShare, badge }) => {
   const hasDiscount = product.oldPrice && product.oldPrice > product.price;
   const pct = hasDiscount ? Math.round(((product.oldPrice - product.price) / product.oldPrice) * 100) : 0;
   return (
-    <article className="group flex flex-col rounded-2xl border border-gray-200 bg-white p-3.5 transition-all duration-200 hover:border-orange-200 hover:shadow-[0_12px_32px_-12px_rgba(11,27,51,0.18)]">
-      <div className="relative mb-3 flex h-44 items-center justify-center overflow-hidden rounded-xl bg-[#F6F7F9]">
+    <article className="group flex h-full w-full flex-col rounded-2xl border border-gray-200 bg-white p-3 transition-all duration-200 hover:border-orange-200 hover:shadow-[0_12px_32px_-12px_rgba(11,27,51,0.18)] sm:p-3.5">
+      <div className="relative mb-3 flex h-36 items-center justify-center overflow-hidden rounded-xl bg-[#F6F7F9] sm:h-44">
         {badge && (
-          <span className={`absolute left-2.5 top-2.5 z-10 rounded-full px-2.5 py-1 text-[10px] font-bold text-white ${badge.cls}`}>{badge.label}</span>
+          <span className={`absolute left-2 top-2 z-10 rounded-full px-2.5 py-1 text-[10px] font-bold text-white sm:left-2.5 sm:top-2.5 ${badge.cls}`}>{badge.label}</span>
         )}
         {hasDiscount && (
-          <span className="absolute right-2.5 top-2.5 z-10 rounded-full bg-white px-2 py-1 text-[10px] font-bold text-red-600 shadow-sm">-{pct}%</span>
+          <span className="absolute right-2 top-2 z-10 rounded-full bg-white px-2 py-1 text-[10px] font-bold text-red-600 shadow-sm sm:right-2.5 sm:top-2.5">-{pct}%</span>
         )}
         <img src={product.image} alt={product.name} loading="lazy" className="max-h-full max-w-full object-contain p-3 mix-blend-multiply transition-transform duration-500 group-hover:scale-105" />
         <button
           type="button"
           onClick={() => onShare(product)}
           aria-label={`Share ${product.name}`}
-          className="absolute bottom-2.5 right-2.5 flex h-8 w-8 items-center justify-center rounded-full bg-white text-gray-600 opacity-0 shadow-md transition-all hover:text-[#FF6C00] group-hover:opacity-100 focus:opacity-100"
+          className="absolute bottom-2 right-2 flex h-8 w-8 items-center justify-center rounded-full bg-white text-gray-600 shadow-md transition-all hover:text-[#FF6C00] focus:opacity-100 md:bottom-2.5 md:right-2.5 md:opacity-0 md:group-hover:opacity-100"
         >
           <FiShare2 className="h-4 w-4" />
         </button>
       </div>
 
-      <Link to={`/product/${product.id}`} className="line-clamp-2 min-h-[2.5rem] text-[13.5px] font-semibold leading-snug text-[#0B1B33] transition-colors hover:text-[#FF6C00]">
+      <Link to={`/product/${product.id}`} className="line-clamp-2 min-h-[2.5rem] text-[13px] font-semibold leading-snug text-[#0B1B33] transition-colors hover:text-[#FF6C00] sm:text-[13.5px]">
         {product.name}
       </Link>
 
@@ -79,24 +127,26 @@ const ProductCard = ({ product, onAdd, onWhatsapp, onShare, badge }) => {
         {product.rating && <span className="text-[11px] text-gray-400">{product.rating}</span>}
       </div>
 
-      <div className="mt-2 flex items-baseline gap-2">
-        <span className="text-[18px] font-extrabold text-[#0B1B33]">${Number(product.price).toFixed(2)}</span>
-        {hasDiscount && <span className="text-[12px] text-gray-400 line-through">${Number(product.oldPrice).toFixed(2)}</span>}
+      <div className="mt-2 flex flex-wrap items-baseline gap-x-2">
+        <span className="text-[16px] font-extrabold text-[#0B1B33] sm:text-[18px]">{formatMoney(product.price)}</span>
+        {hasDiscount && <span className="text-[12px] text-gray-400 line-through">{formatMoney(product.oldPrice)}</span>}
       </div>
 
-      <div className="mt-3 flex gap-2">
+      <div className="mt-auto flex gap-2 pt-3">
         <button
           type="button"
           onClick={() => onAdd(product)}
-          className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-[#0B1B33] py-2.5 text-[12.5px] font-semibold text-white transition-colors hover:bg-[#FF6C00] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#FF6C00]"
+          className="flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-[#0B1B33] py-2.5 text-[12.5px] font-semibold text-white transition-colors hover:bg-[#FF6C00] active:scale-[0.98] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#FF6C00]"
         >
-          <FiShoppingCart className="h-4 w-4" /> Add to cart
+          <FiShoppingCart className="h-4 w-4" />
+          <span className="sm:hidden">Add</span>
+          <span className="hidden sm:inline">Add to cart</span>
         </button>
         <button
           type="button"
           onClick={() => onWhatsapp(product)}
           aria-label="Order on WhatsApp"
-          className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#25D366]/10 text-[#1DA851] transition-colors hover:bg-[#25D366] hover:text-white"
+          className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-[#25D366]/10 text-[#1DA851] transition-colors hover:bg-[#25D366] hover:text-white active:scale-95"
         >
           <FaWhatsapp className="h-[18px] w-[18px]" />
         </button>
@@ -105,7 +155,247 @@ const ProductCard = ({ product, onAdd, onWhatsapp, onShare, badge }) => {
   );
 };
 
-/* ---------- Page ---------- */
+/* -------------------------------------------------------------------------- */
+/*  Side navigation                                                            */
+/* -------------------------------------------------------------------------- */
+/** The category list, shared by the desktop sidebar and the mobile drawer. */
+const CategoryList = ({ items, variant = 'sidebar', onNavigate }) => {
+  const isDrawer = variant === 'drawer';
+  return (
+    <ul className={isDrawer ? 'space-y-1' : 'flex flex-1 flex-col px-2 py-1.5'}>
+      {items.map((cat) => (
+        <li key={cat.name} className={isDrawer ? '' : 'flex flex-1'}>
+          <Link
+            to={cat.link}
+            onClick={onNavigate}
+            className={`group flex w-full items-center gap-3 transition-colors hover:bg-orange-50 active:bg-orange-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#FF6C00] ${
+              isDrawer ? 'rounded-xl px-2.5 py-2' : 'rounded-lg px-2'
+            }`}
+          >
+            <span
+              className={`flex flex-shrink-0 items-center justify-center rounded-lg bg-orange-50 text-[#FF6C00] ring-1 ring-orange-100 transition-colors group-hover:bg-[#FF6C00] group-hover:text-white group-hover:ring-[#FF6C00] ${
+                isDrawer ? 'h-11 w-11 rounded-xl' : 'h-9 w-9'
+              }`}
+            >
+              <cat.icon className={isDrawer ? 'h-[22px] w-[22px]' : 'h-[21px] w-[21px]'} strokeWidth={1.9} />
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className={`block truncate font-semibold text-[#1F2937] group-hover:text-[#FF6C00] ${isDrawer ? 'text-[15px]' : 'text-[14px]'}`}>
+                {cat.name}
+              </span>
+              {isDrawer && <span className="block truncate text-[12px] text-gray-500">{cat.hint}</span>}
+            </span>
+            <ChevronRight className="h-4 w-4 flex-shrink-0 text-gray-300 transition-all group-hover:translate-x-0.5 group-hover:text-[#FF6C00]" />
+          </Link>
+        </li>
+      ))}
+    </ul>
+  );
+};
+
+/** Slide-out side navigation for phones and tablets. */
+const CategoryDrawer = ({ open, onClose, onJump }) => {
+  const [query, setQuery] = useState('');
+  const closeRef = useRef(null);
+
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return CATEGORIES;
+    return CATEGORIES.filter((c) => c.name.toLowerCase().includes(q) || c.hint.toLowerCase().includes(q));
+  }, [query]);
+
+  useEffect(() => {
+    if (open) {
+      if (closeRef.current) closeRef.current.focus();
+    } else {
+      setQuery('');
+    }
+  }, [open]);
+
+  return (
+    <div
+      className={`fixed inset-0 z-[60] lg:hidden ${open ? 'visible' : 'pointer-events-none invisible [transition:visibility_0s_linear_0.3s]'}`}
+      aria-hidden={!open}
+    >
+      <div
+        onClick={onClose}
+        className={`absolute inset-0 bg-[#0B1B33]/60 backdrop-blur-sm transition-opacity duration-300 ${open ? 'opacity-100' : 'opacity-0'}`}
+      />
+
+      <aside
+        role="dialog"
+        aria-modal="true"
+        aria-label="Browse categories"
+        className={`absolute inset-y-0 left-0 flex w-[88%] max-w-[360px] flex-col bg-white shadow-2xl transition-transform duration-300 ease-out ${
+          open ? 'translate-x-0' : '-translate-x-full'
+        }`}
+      >
+        {/* Header */}
+        <div className="flex-shrink-0 bg-gradient-to-br from-[#FF6C00] to-[#FF8A2B] px-4 pb-4 pt-5 text-white">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/20">
+                <LayoutGrid className="h-5 w-5" strokeWidth={2.2} />
+              </span>
+              <div className="leading-tight">
+                <h2 className="text-[17px] font-extrabold">Shop menu</h2>
+                <p className="text-[12px] text-white/80">Find what you need</p>
+              </div>
+            </div>
+            <button
+              ref={closeRef}
+              type="button"
+              onClick={onClose}
+              aria-label="Close menu"
+              className="flex h-9 w-9 items-center justify-center rounded-full bg-white/20 transition-colors hover:bg-white/30 focus-visible:outline focus-visible:outline-2 focus-visible:outline-white"
+            >
+              <FiX className="h-5 w-5" />
+            </button>
+          </div>
+
+          <div className="relative mt-4">
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+            <input
+              type="search"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Search categories"
+              aria-label="Search categories"
+              className="w-full rounded-xl border-0 bg-white py-2.5 pl-9 pr-3 text-[14px] text-gray-900 placeholder-gray-400 shadow-sm focus:outline-none focus:ring-2 focus:ring-white/60"
+            />
+          </div>
+        </div>
+
+        {/* Scrollable body */}
+        <div className="no-scrollbar flex-1 overflow-y-auto overscroll-contain px-3 py-4">
+          <p className="mb-2 px-2.5 text-[11px] font-bold uppercase tracking-wider text-gray-400">Categories</p>
+          {filtered.length > 0 ? (
+            <CategoryList items={filtered} variant="drawer" onNavigate={onClose} />
+          ) : (
+            <p className="rounded-xl bg-gray-50 px-3 py-6 text-center text-[13px] text-gray-500">
+              No categories match &ldquo;{query}&rdquo;.
+            </p>
+          )}
+
+          {!query && (
+            <>
+              <p className="mb-2 mt-6 px-2.5 text-[11px] font-bold uppercase tracking-wider text-gray-400">Explore</p>
+              <div className="grid grid-cols-2 gap-2">
+                {QUICK_LINKS.map(({ id, label, icon: Icon }) => (
+                  <button
+                    key={id}
+                    type="button"
+                    onClick={() => onJump(id)}
+                    className="flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-left text-[13px] font-semibold text-[#0B1B33] transition-colors hover:border-orange-200 hover:bg-orange-50 active:bg-orange-100"
+                  >
+                    <Icon className="h-4 w-4 flex-shrink-0 text-[#FF6C00]" />
+                    <span className="truncate">{label}</span>
+                  </button>
+                ))}
+              </div>
+
+              <p className="mb-2 mt-6 px-2.5 text-[11px] font-bold uppercase tracking-wider text-gray-400">Top brands</p>
+              <div className="flex flex-wrap gap-2 px-1">
+                {BRANDS.map((name) => (
+                  <Link
+                    key={name}
+                    to="/shop"
+                    onClick={onClose}
+                    className="rounded-full border border-gray-200 px-3.5 py-1.5 text-[12.5px] font-bold text-gray-600 transition-colors hover:border-[#FF6C00] hover:text-[#FF6C00]"
+                  >
+                    {name}
+                  </Link>
+                ))}
+              </div>
+            </>
+          )}
+        </div>
+
+        {/* Footer actions */}
+        <div className="flex-shrink-0 space-y-2 border-t border-gray-100 bg-white px-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] pt-3">
+          <Link
+            to="/shop"
+            onClick={onClose}
+            className="flex items-center justify-center gap-2 rounded-xl bg-[#0B1B33] py-3 text-[14px] font-bold text-white transition-colors hover:bg-[#FF6C00]"
+          >
+            Browse all products <ArrowRight className="h-4 w-4" />
+          </Link>
+          <a
+            href={waLink()}
+            target="_blank"
+            rel="noreferrer"
+            className="flex items-center justify-center gap-2 rounded-xl bg-[#25D366]/10 py-3 text-[14px] font-bold text-[#1DA851] transition-colors hover:bg-[#25D366] hover:text-white"
+          >
+            <FaWhatsapp className="h-5 w-5" /> Chat with us
+          </a>
+        </div>
+      </aside>
+    </div>
+  );
+};
+
+/** App-style bottom tab bar (phones and tablets only). */
+const MobileTabBar = ({ cartCount, drawerOpen, onHome, onCategories }) => {
+  const tab = (active) =>
+    `relative flex w-full flex-col items-center gap-0.5 py-2 text-[10.5px] font-semibold transition-colors ${
+      active ? 'text-[#FF6C00]' : 'text-gray-500 active:text-[#FF6C00]'
+    }`;
+  const indicator = (active) =>
+    active ? <span className="absolute inset-x-6 top-0 h-0.5 rounded-b bg-[#FF6C00]" /> : null;
+
+  return (
+    <nav
+      aria-label="Primary"
+      className="fixed inset-x-0 bottom-0 z-50 border-t border-gray-200 bg-white/95 pb-[env(safe-area-inset-bottom)] shadow-[0_-6px_24px_-12px_rgba(11,27,51,0.18)] backdrop-blur lg:hidden"
+    >
+      <ul className="mx-auto grid max-w-lg grid-cols-5">
+        <li>
+          <button type="button" onClick={onHome} className={tab(!drawerOpen)} aria-current={!drawerOpen ? 'page' : undefined}>
+            {indicator(!drawerOpen)}
+            <House className="h-[22px] w-[22px]" strokeWidth={1.9} />
+            Home
+          </button>
+        </li>
+        <li>
+          <button type="button" onClick={onCategories} className={tab(drawerOpen)} aria-haspopup="dialog" aria-expanded={drawerOpen}>
+            {indicator(drawerOpen)}
+            <LayoutGrid className="h-[22px] w-[22px]" strokeWidth={1.9} />
+            Categories
+          </button>
+        </li>
+        <li>
+          <Link to="/shop" className={tab(false)}>
+            <Store className="h-[22px] w-[22px]" strokeWidth={1.9} />
+            Shop
+          </Link>
+        </li>
+        <li>
+          <Link to={CART_ROUTE} className={tab(false)} aria-label={`Cart, ${cartCount} items`}>
+            <span className="relative">
+              <FiShoppingCart className="h-[22px] w-[22px]" />
+              {cartCount > 0 && (
+                <span className="absolute -right-2.5 -top-2 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-[#FF6C00] px-1 text-[10px] font-bold leading-none text-white ring-2 ring-white">
+                  {cartCount > 99 ? '99+' : cartCount}
+                </span>
+              )}
+            </span>
+            Cart
+          </Link>
+        </li>
+        <li>
+          <a href={waLink()} target="_blank" rel="noreferrer" className={tab(false)}>
+            <FaWhatsapp className="h-[22px] w-[22px] text-[#25D366]" />
+            Chat
+          </a>
+        </li>
+      </ul>
+    </nav>
+  );
+};
+
+/* -------------------------------------------------------------------------- */
+/*  Page                                                                       */
+/* -------------------------------------------------------------------------- */
 const Home = () => {
   const [activeTab, setActiveTab] = useState('BESTSELLERS');
   const [timeLeft, setTimeLeft] = useState({ hours: 12, minutes: 34, seconds: 56 });
@@ -113,15 +403,33 @@ const Home = () => {
   const [showShareModal, setShowShareModal] = useState(false);
   const [shareProduct, setShareProduct] = useState(null);
   const [copied, setCopied] = useState(false);
-  const { addToCart } = useCart();
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [toast, setToast] = useState(null);
+  const toastTimer = useRef(null);
+  const touchStartX = useRef(null);
+  const { addToCart, cartItems } = useCart();
+
+  const cartCount = (cartItems || []).reduce((sum, item) => sum + (Number(item.quantity) || 0), 0);
+  const canNativeShare = typeof navigator !== 'undefined' && typeof navigator.share === 'function';
+
+  /* --- Toast --- */
+  const showToast = useCallback((message) => {
+    window.clearTimeout(toastTimer.current);
+    setToast(message);
+    toastTimer.current = window.setTimeout(() => setToast(null), 2200);
+  }, []);
+  useEffect(() => () => window.clearTimeout(toastTimer.current), []);
 
   /* --- Handlers --- */
-  const handleAddToCart = (product) => addToCart(product);
+  const handleAddToCart = (product) => {
+    addToCart(product);
+    showToast(`${product.name} added to cart`);
+  };
 
   const handleBuyOnWhatsapp = (product) => {
     const productUrl = `${window.location.origin}/product/${product.id}`;
-    const message = `Hi! I'm interested in: ${product.name} - Price: $${product.price}. Please provide more details. ${productUrl}`;
-    window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, '_blank');
+    const message = `Hi! I'm interested in: ${product.name} - Price: ${formatMoney(product.price)}. Please provide more details. ${productUrl}`;
+    window.open(waLink(message), '_blank', 'noopener,noreferrer');
   };
 
   const handleShareProduct = (product) => {
@@ -132,19 +440,66 @@ const Home = () => {
 
   const getProductUrl = () => (shareProduct ? `${window.location.origin}/product/${shareProduct.id}` : '');
   const shareText = () => encodeURIComponent(`Check out ${shareProduct?.name ?? ''}`);
-  const shareOnFacebook = () => window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(getProductUrl())}`, '_blank');
-  const shareOnTwitter = () => window.open(`https://twitter.com/intent/tweet?url=${encodeURIComponent(getProductUrl())}&text=${shareText()}`, '_blank');
-  const shareOnLinkedIn = () => window.open(`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(getProductUrl())}`, '_blank');
-  const shareOnTelegram = () => window.open(`https://t.me/share/url?url=${encodeURIComponent(getProductUrl())}&text=${shareText()}`, '_blank');
+  const openShare = (url) => window.open(url, '_blank', 'noopener,noreferrer');
+  const shareOnWhatsapp = () => {
+    openShare(`https://wa.me/?text=${encodeURIComponent(`Check out ${shareProduct?.name ?? ''} ${getProductUrl()}`)}`);
+    setShowShareModal(false);
+  };
+  const shareOnFacebook = () => openShare(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(getProductUrl())}`);
+  const shareOnTwitter = () => openShare(`https://twitter.com/intent/tweet?url=${encodeURIComponent(getProductUrl())}&text=${shareText()}`);
+  const shareOnLinkedIn = () => openShare(`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(getProductUrl())}`);
+  const shareOnTelegram = () => openShare(`https://t.me/share/url?url=${encodeURIComponent(getProductUrl())}&text=${shareText()}`);
+  const shareNative = async () => {
+    try {
+      await navigator.share({ title: shareProduct.name, text: `Check out ${shareProduct.name}`, url: getProductUrl() });
+      setShowShareModal(false);
+    } catch (e) {
+      /* dismissed by the user */
+    }
+  };
   const copyLink = async () => {
     try {
       await navigator.clipboard.writeText(getProductUrl());
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
-    } catch {
+    } catch (e) {
       /* clipboard unavailable */
     }
   };
+
+  const jumpTo = (id) => {
+    setDrawerOpen(false);
+    window.setTimeout(() => {
+      const el = document.getElementById(id);
+      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 250);
+  };
+
+  /* --- Overlays: lock scroll, close on Escape, close drawer on desktop resize --- */
+  useEffect(() => {
+    if (!drawerOpen && !showShareModal) return undefined;
+    const previous = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    const onKey = (e) => {
+      if (e.key === 'Escape') {
+        setDrawerOpen(false);
+        setShowShareModal(false);
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => {
+      document.body.style.overflow = previous;
+      window.removeEventListener('keydown', onKey);
+    };
+  }, [drawerOpen, showShareModal]);
+
+  useEffect(() => {
+    const onResize = () => {
+      if (window.innerWidth >= 1024) setDrawerOpen(false);
+    };
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, []);
 
   /* --- Countdown --- */
   useEffect(() => {
@@ -160,17 +515,6 @@ const Home = () => {
   }, []);
 
   /* --- Data --- */
-  const sidebarCategories = [
-    { name: 'Smart TVs', link: '/shop?category=audio', icon: Tv },
-    { name: 'Washing Machines', link: '/shop?category=appliances', icon: WashingMachine },
-    { name: 'Fridges & Freezers', link: '/shop?category=appliances', icon: Refrigerator },
-    { name: 'Cooking Machines', link: '/shop?category=appliances', icon: CookingPot },
-    { name: 'Radio & Speakers', link: '/shop?category=audio', icon: Speaker },
-    { name: 'Blenders', link: '/shop?category=appliances', icon: Blend },
-    { name: 'Kettles & Jiko', link: '/shop?category=appliances', icon: Flame },
-    { name: 'Home Essentials', link: '/shop', icon: House },
-  ];
-
   const heroSlides = useMemo(() => {
     const pick = (id) => products.find((p) => p.id === id) || products[0];
     const pctOf = (p) => (p.oldPrice && p.oldPrice > p.price ? Math.round((1 - p.price / p.oldPrice) * 100) : 0);
@@ -185,8 +529,8 @@ const Home = () => {
         desc: tv.description,
         rating: tv.rating,
         reviews: '2,480 reviews',
-        price: formatPrice(tv.price),
-        oldPrice: tv.oldPrice ? formatPrice(tv.oldPrice) : null,
+        price: formatMoney(tv.price),
+        oldPrice: tv.oldPrice ? formatMoney(tv.oldPrice) : null,
         pct: pctOf(tv),
         cta: 'Shop this TV',
         link: `/product/${tv.id}`,
@@ -201,8 +545,8 @@ const Home = () => {
         desc: fridge.description,
         rating: fridge.rating,
         reviews: '1,920 reviews',
-        price: formatPrice(fridge.price),
-        oldPrice: fridge.oldPrice ? formatPrice(fridge.oldPrice) : null,
+        price: formatMoney(fridge.price),
+        oldPrice: fridge.oldPrice ? formatMoney(fridge.oldPrice) : null,
         pct: pctOf(fridge),
         cta: 'Shop refrigerators',
         link: `/product/${fridge.id}`,
@@ -217,8 +561,8 @@ const Home = () => {
         desc: speaker.description,
         rating: speaker.rating,
         reviews: '3,110 reviews',
-        price: formatPrice(speaker.price),
-        oldPrice: speaker.oldPrice ? formatPrice(speaker.oldPrice) : null,
+        price: formatMoney(speaker.price),
+        oldPrice: speaker.oldPrice ? formatMoney(speaker.oldPrice) : null,
         pct: pctOf(speaker),
         cta: 'Shop audio',
         link: `/product/${speaker.id}`,
@@ -234,7 +578,17 @@ const Home = () => {
     return () => clearInterval(slider);
   }, [heroSlide, heroSlides.length]);
 
-  const brands = ['Hisense', 'LG', 'Samsung', 'Haier', 'SPJ', 'Sayona', 'KING'];
+  /* Swipe left / right on the hero carousel */
+  const onHeroTouchStart = (e) => {
+    touchStartX.current = e.touches[0].clientX;
+  };
+  const onHeroTouchEnd = (e) => {
+    if (touchStartX.current === null) return;
+    const dx = e.changedTouches[0].clientX - touchStartX.current;
+    touchStartX.current = null;
+    if (Math.abs(dx) < 50) return;
+    setHeroSlide((p) => (p + (dx < 0 ? 1 : -1) + heroSlides.length) % heroSlides.length);
+  };
 
   const featured = products.filter((item) => item.featured);
   const tabbedProducts = useMemo(() => {
@@ -275,41 +629,65 @@ const Home = () => {
   }, []);
 
   return (
-    <div className="min-h-screen bg-[#F3F4F6] text-gray-900 antialiased" style={{ fontFamily: "'Plus Jakarta Sans', 'Inter', system-ui, sans-serif" }}>
-      <style>{`@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');`}</style>
-      <div className="mx-auto max-w-[1400px] px-4 py-6 sm:px-6 lg:px-8">
+    <div
+      className="min-h-screen overflow-x-hidden bg-[#F3F4F6] pb-20 text-gray-900 antialiased lg:pb-0"
+      style={{ fontFamily: "'Plus Jakarta Sans', 'Inter', system-ui, sans-serif" }}
+    >
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+        .no-scrollbar { scrollbar-width: none; -ms-overflow-style: none; }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        @keyframes heroProgress { from { width: 0 } to { width: 100% } }
+        @keyframes sheetUp { from { transform: translateY(100%) } to { transform: none } }
+        @media (prefers-reduced-motion: reduce) {
+          [class*="heroProgress"] { animation: none !important; width: 100%; }
+          [class*="sheetUp"] { animation: none !important; }
+        }
+      `}</style>
+
+      <div className="mx-auto max-w-[1400px] px-4 py-4 sm:px-6 sm:py-6 lg:px-8">
+
+        {/* ================= MOBILE CATEGORY STRIP ================= */}
+        <nav aria-label="Categories" className="no-scrollbar -mx-4 mb-4 flex gap-3 overflow-x-auto px-4 pb-1 lg:hidden">
+          <button
+            type="button"
+            onClick={() => setDrawerOpen(true)}
+            className="flex w-[68px] flex-shrink-0 flex-col items-center gap-1.5 active:scale-95"
+          >
+            <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-[#FF6C00] to-[#FF8A2B] text-white shadow-md shadow-orange-500/30">
+              <LayoutGrid className="h-6 w-6" strokeWidth={2} />
+            </span>
+            <span className="text-[11px] font-bold text-[#0B1B33]">All</span>
+          </button>
+          {CATEGORIES.map((cat) => (
+            <Link key={cat.name} to={cat.link} className="flex w-[68px] flex-shrink-0 flex-col items-center gap-1.5 active:scale-95">
+              <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-white text-[#FF6C00] shadow-sm ring-1 ring-gray-200">
+                <cat.icon className="h-6 w-6" strokeWidth={1.8} />
+              </span>
+              <span className="line-clamp-2 w-full text-center text-[11px] font-semibold leading-tight text-[#1F2937]">{cat.name}</span>
+            </Link>
+          ))}
+        </nav>
 
         {/* ================= HERO ================= */}
         <div className="mb-8 grid grid-cols-1 gap-3 lg:h-[460px] lg:grid-cols-12">
 
-          {/* ---- Sidebar ---- */}
-          <aside className="hidden flex-col overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-[0_4px_20px_-8px_rgba(11,27,51,0.12)] lg:col-span-3 lg:flex">
+          {/* ---- Desktop sidebar ---- */}
+          <aside
+            aria-label="Shop by category"
+            className="hidden flex-col overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-[0_4px_20px_-8px_rgba(11,27,51,0.12)] lg:col-span-3 lg:flex"
+          >
             <div className="flex items-center gap-3 bg-gradient-to-r from-[#FF6C00] to-[#FF8A2B] px-4 py-3.5 text-white">
               <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-white/20">
                 <LayoutGrid className="h-5 w-5" strokeWidth={2.2} />
               </span>
               <div className="leading-tight">
-                <h3 className="text-[15px] font-extrabold">All categories</h3>
-                <p className="text-[11px] text-white/80">Find what you need</p>
+                <h2 className="text-[15px] font-extrabold">All categories</h2>
+                <p className="text-[11px] text-white/80">{CATEGORIES.length} categories to explore</p>
               </div>
             </div>
 
-            <ul className="flex flex-1 flex-col px-2 py-1.5">
-              {sidebarCategories.map((cat) => (
-                <li key={cat.name} className="flex flex-1">
-                  <Link
-                    to={cat.link}
-                    className="group flex w-full items-center gap-3 rounded-lg px-2 transition-colors hover:bg-orange-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#FF6C00]"
-                  >
-                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-orange-50 text-[#FF6C00] ring-1 ring-orange-100 transition-colors group-hover:bg-[#FF6C00] group-hover:text-white group-hover:ring-[#FF6C00]">
-                      <cat.icon className="h-[21px] w-[21px]" strokeWidth={1.9} />
-                    </span>
-                    <span className="min-w-0 flex-1 truncate text-[14px] font-semibold text-[#1F2937] group-hover:text-[#FF6C00]">{cat.name}</span>
-                    <ChevronRight className="h-4 w-4 shrink-0 text-gray-300 transition-all group-hover:translate-x-0.5 group-hover:text-[#FF6C00]" />
-                  </Link>
-                </li>
-              ))}
-            </ul>
+            <CategoryList items={CATEGORIES} variant="sidebar" />
 
             <Link to="/shop" className="flex items-center justify-between border-t border-gray-100 bg-gray-50 px-4 py-3 text-[13px] font-bold text-[#0B1B33] transition-colors hover:bg-[#0B1B33] hover:text-white">
               Browse all products
@@ -318,7 +696,14 @@ const Home = () => {
           </aside>
 
           {/* ---- Middle: carousel ---- */}
-          <section className="relative min-h-[500px] overflow-hidden rounded-2xl bg-[#0B1B33] shadow-[0_4px_20px_-8px_rgba(11,27,51,0.25)] lg:col-span-6 lg:min-h-0" aria-roledescription="carousel" aria-label="Featured deals">
+          <section
+            className="relative min-h-[480px] overflow-hidden rounded-2xl bg-[#0B1B33] shadow-[0_4px_20px_-8px_rgba(11,27,51,0.25)] sm:min-h-[500px] lg:col-span-6 lg:min-h-0"
+            aria-roledescription="carousel"
+            aria-label="Featured deals"
+            style={{ touchAction: 'pan-y' }}
+            onTouchStart={onHeroTouchStart}
+            onTouchEnd={onHeroTouchEnd}
+          >
             {heroSlides.map((s, idx) => (
               <div
                 key={idx}
@@ -342,9 +727,9 @@ const Home = () => {
                     className={`relative max-h-full max-w-full object-contain drop-shadow-[0_32px_36px_rgba(0,0,0,0.55)] transition-transform duration-[7000ms] ease-out ${idx === heroSlide ? 'scale-110' : 'scale-100'}`}
                   />
                   {s.pct > 0 && (
-                    <div className="absolute -right-1 top-0 flex h-[70px] w-[70px] flex-col items-center justify-center rounded-full bg-[#FF6C00] text-white shadow-xl shadow-orange-500/40 ring-4 ring-white/20">
+                    <div className="absolute -right-1 top-0 flex h-[64px] w-[64px] flex-col items-center justify-center rounded-full bg-[#FF6C00] text-white shadow-xl shadow-orange-500/40 ring-4 ring-white/20 sm:h-[70px] sm:w-[70px]">
                       <span className="text-[10px] font-semibold leading-none">Save</span>
-                      <span className="text-[21px] font-black leading-none">{s.pct}%</span>
+                      <span className="text-[19px] font-black leading-none sm:text-[21px]">{s.pct}%</span>
                     </div>
                   )}
                 </div>
@@ -356,7 +741,7 @@ const Home = () => {
                       <Sparkles className="h-3 w-3" />
                       {s.tag}
                     </span>
-                    <h1 className="mt-3 line-clamp-3 text-[22px] font-extrabold leading-[1.15] tracking-tight text-white lg:text-[26px]">{s.title}</h1>
+                    <h2 className="mt-3 line-clamp-3 text-[22px] font-extrabold leading-[1.15] tracking-tight text-white lg:text-[26px]">{s.title}</h2>
                     <p className="mt-1.5 line-clamp-2 text-[13px] font-medium leading-snug text-white/70">{s.highlight}</p>
 
                     <div className="mt-3 flex items-end gap-2.5">
@@ -407,6 +792,22 @@ const Home = () => {
                 {String(heroSlide + 1).padStart(2, '0')}
                 <span className="text-white/40"> / {String(heroSlides.length).padStart(2, '0')}</span>
               </span>
+
+              {/* Dots (phones) */}
+              <div className="flex items-center gap-1.5 sm:hidden" role="tablist" aria-label="Choose slide">
+                {heroSlides.map((s, dot) => (
+                  <button
+                    key={dot}
+                    type="button"
+                    role="tab"
+                    aria-selected={dot === heroSlide}
+                    aria-label={`Slide ${dot + 1}`}
+                    onClick={() => setHeroSlide(dot)}
+                    className={`h-1.5 rounded-full transition-all ${dot === heroSlide ? 'w-5 bg-[#FF6C00]' : 'w-1.5 bg-white/50'}`}
+                  />
+                ))}
+              </div>
+
               <div className="flex items-center gap-1.5 sm:mr-[68px]">
                 <button
                   type="button"
@@ -426,17 +827,16 @@ const Home = () => {
                 </button>
               </div>
             </div>
-
-            <style>{`
-              @keyframes heroProgress { from { width: 0 } to { width: 100% } }
-              @media (prefers-reduced-motion: reduce) { [class*="heroProgress"] { animation: none !important; width: 100%; } }
-            `}</style>
           </section>
 
-          {/* ---- Right: banners ---- */}
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:col-span-3 lg:grid-cols-1 lg:grid-rows-2">
+          {/* ---- Right: banners (swipe row on phones) ---- */}
+          <div className="no-scrollbar -mx-4 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 sm:mx-0 sm:grid sm:grid-cols-2 sm:overflow-visible sm:px-0 lg:col-span-3 lg:grid-cols-1 lg:grid-rows-2">
             {heroBanners.map((b) => (
-              <Link key={b.title} to={b.link} className="group relative flex min-h-[180px] overflow-hidden rounded-2xl bg-[#0B1B33] shadow-[0_4px_20px_-8px_rgba(11,27,51,0.25)] lg:min-h-0">
+              <Link
+                key={b.title}
+                to={b.link}
+                className="group relative flex min-h-[180px] w-[84%] flex-shrink-0 snap-start overflow-hidden rounded-2xl bg-[#0B1B33] shadow-[0_4px_20px_-8px_rgba(11,27,51,0.25)] sm:w-auto lg:min-h-0"
+              >
                 <img src={b.image} alt="" aria-hidden="true" className="absolute inset-0 h-full w-full scale-125 object-cover blur-xl brightness-90 saturate-125" />
                 <div className={`absolute inset-0 bg-gradient-to-br ${b.overlay}`} />
                 <div className="absolute -right-10 -top-10 h-36 w-36 rounded-full bg-white/10" />
@@ -458,73 +858,76 @@ const Home = () => {
         </div>
 
         {/* ================= SERVICE FEATURES ================= */}
-        <div className="mb-10 grid grid-cols-2 gap-3 rounded-2xl border border-gray-200 bg-white p-2 shadow-sm lg:grid-cols-4">
+        <div className="mb-10 grid grid-cols-2 gap-1 rounded-2xl border border-gray-200 bg-white p-1.5 shadow-sm sm:gap-3 sm:p-2 lg:grid-cols-4">
           {[
-            { icon: Truck, title: 'Free shipping', desc: 'On orders over $99', color: 'bg-orange-50 text-[#FF6C00]' },
+            { icon: Truck, title: 'Free shipping', desc: `On orders over ${formatMoney(FREE_SHIPPING_THRESHOLD)}`, color: 'bg-orange-50 text-[#FF6C00]' },
             { icon: RotateCcw, title: 'Easy returns', desc: '30-day money back', color: 'bg-emerald-50 text-emerald-600' },
             { icon: ShieldCheck, title: 'Secure payment', desc: '100% safe and encrypted', color: 'bg-blue-50 text-blue-600' },
             { icon: Headphones, title: '24/7 support', desc: 'Expert help anytime', color: 'bg-purple-50 text-purple-600' },
           ].map(({ icon: Icon, title, desc, color }) => (
-            <div key={title} className="flex items-center gap-3 rounded-xl p-3 sm:p-4">
-              <span className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${color}`}>
+            <div key={title} className="flex items-center gap-3 rounded-xl p-2.5 sm:p-4">
+              <span className={`flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl sm:h-11 sm:w-11 ${color}`}>
                 <Icon className="h-5 w-5" strokeWidth={1.8} />
               </span>
               <div className="min-w-0">
-                <h4 className="truncate text-[13.5px] font-bold text-[#0B1B33]">{title}</h4>
-                <p className="truncate text-[12px] text-gray-500">{desc}</p>
+                <h4 className="truncate text-[13px] font-bold text-[#0B1B33] sm:text-[13.5px]">{title}</h4>
+                <p className="truncate text-[11.5px] text-gray-500 sm:text-[12px]">{desc}</p>
               </div>
             </div>
           ))}
         </div>
 
         {/* ================= DEALS OF THE DAY ================= */}
-        <section className="mb-12">
+        <section id="deals" className="mb-12 scroll-mt-4">
           <SectionHeader icon={Flame} title="Deals of the day" subtitle="Up to 30% off selected items" action={{ to: '/shop', label: 'View all deals' }} />
-          <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+          <ScrollRow className="md:grid-cols-4">
             {flashSaleProducts.map((product) => (
-              <ProductCard
-                key={product.id}
-                product={product}
-                badge={{ label: 'Deal', cls: 'bg-red-500' }}
-                onAdd={handleAddToCart}
-                onWhatsapp={handleBuyOnWhatsapp}
-                onShare={handleShareProduct}
-              />
+              <RowItem key={product.id}>
+                <ProductCard
+                  product={product}
+                  badge={{ label: 'Deal', cls: 'bg-red-500' }}
+                  onAdd={handleAddToCart}
+                  onWhatsapp={handleBuyOnWhatsapp}
+                  onShare={handleShareProduct}
+                />
+              </RowItem>
             ))}
-          </div>
+          </ScrollRow>
         </section>
 
         {/* ================= PROMO BANNERS ================= */}
-        <div className="mb-12 grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <ScrollRow className="mb-12 md:grid-cols-2 lg:grid-cols-4">
           {[
             { title: 'Home appliance deals', sub: 'New arrivals', img: '/images/products/product-16.jpg', bg: 'from-[#1E73BE] to-[#154F85]' },
             { title: 'Entertainment mega sale', sub: 'Up to 50% off', img: '/images/products/product-13.jpg', bg: 'from-[#FF7A1A] to-[#D94F00]' },
             { title: 'Audio & speakers', sub: 'Free shipping', img: '/images/products/product-03.jpg', bg: 'from-[#1F2A44] to-[#0B1B33]' },
             { title: 'Smart TVs', sub: 'Limited time', img: '/images/products/product-11.jpg', bg: 'from-[#6D3BD8] to-[#4A22A8]' },
           ].map((b) => (
-            <Link key={b.title} to="/shop" className={`group relative flex h-[170px] items-center overflow-hidden rounded-2xl bg-gradient-to-br ${b.bg} p-6 transition-shadow hover:shadow-xl`}>
-              <div className="relative z-10 max-w-[58%]">
-                <span className="mb-2 inline-block rounded-full bg-white/20 px-2.5 py-1 text-[11px] font-semibold text-white">{b.sub}</span>
-                <h3 className="text-[17px] font-bold leading-snug text-white">{b.title}</h3>
-                <span className="mt-2 inline-flex items-center gap-1 text-[12.5px] font-semibold text-white/90 group-hover:text-white">
-                  Shop now <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />
-                </span>
-              </div>
-              <div className="absolute -right-2 bottom-3 flex h-28 w-28 items-center justify-center rounded-2xl bg-white/90 p-2 shadow-lg transition-transform duration-500 group-hover:-rotate-3 group-hover:scale-105">
-                <img src={b.img} alt="" className="max-h-full max-w-full object-contain mix-blend-multiply" />
-              </div>
-            </Link>
+            <RowItem key={b.title} className="w-[82%] max-w-[340px]">
+              <Link to="/shop" className={`group relative flex h-[160px] w-full items-center overflow-hidden rounded-2xl bg-gradient-to-br ${b.bg} p-5 transition-shadow hover:shadow-xl sm:h-[170px] sm:p-6`}>
+                <div className="relative z-10 max-w-[58%]">
+                  <span className="mb-2 inline-block rounded-full bg-white/20 px-2.5 py-1 text-[11px] font-semibold text-white">{b.sub}</span>
+                  <h3 className="text-[16px] font-bold leading-snug text-white sm:text-[17px]">{b.title}</h3>
+                  <span className="mt-2 inline-flex items-center gap-1 text-[12.5px] font-semibold text-white/90 group-hover:text-white">
+                    Shop now <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />
+                  </span>
+                </div>
+                <div className="absolute -right-2 bottom-3 flex h-28 w-28 items-center justify-center rounded-2xl bg-white/90 p-2 shadow-lg transition-transform duration-500 group-hover:-rotate-3 group-hover:scale-105">
+                  <img src={b.img} alt="" className="max-h-full max-w-full object-contain mix-blend-multiply" />
+                </div>
+              </Link>
+            </RowItem>
           ))}
-        </div>
+        </ScrollRow>
 
         {/* ================= DEAL SPOTLIGHT ================= */}
-        <section className="mb-12">
+        <section id="flash" className="mb-12 scroll-mt-4">
           <SectionHeader icon={FiZap} title="Flash sale spotlight" subtitle="Limited stock, today only">
-            <div className="flex items-center gap-2" role="timer" aria-label="Time left on this deal">
+            <div className="flex items-center gap-1.5 sm:gap-2" role="timer" aria-label="Time left on this deal">
               <span className="mr-1 text-[13px] font-medium text-gray-500">Ends in</span>
               {Object.entries(timeLeft).map(([unit, value]) => (
-                <div key={unit} className="min-w-[54px] rounded-xl bg-[#0B1B33] px-3 py-2 text-center text-white">
-                  <div className="text-[18px] font-bold tabular-nums leading-none">{String(value).padStart(2, '0')}</div>
+                <div key={unit} className="min-w-[48px] rounded-xl bg-[#0B1B33] px-2.5 py-2 text-center text-white sm:min-w-[54px] sm:px-3">
+                  <div className="text-[17px] font-bold tabular-nums leading-none sm:text-[18px]">{String(value).padStart(2, '0')}</div>
                   <div className="mt-1 text-[10px] capitalize text-white/60">{unit}</div>
                 </div>
               ))}
@@ -532,8 +935,8 @@ const Home = () => {
           </SectionHeader>
 
           <div className="grid items-stretch overflow-hidden rounded-3xl border border-gray-200 bg-white shadow-sm lg:grid-cols-2">
-            <div className="flex items-center justify-center bg-gradient-to-br from-[#FFF1E6] to-[#FFE0C7] p-8">
-              <div className="relative flex h-[300px] w-full max-w-[360px] items-center justify-center rounded-3xl bg-white/80 p-6">
+            <div className="flex items-center justify-center bg-gradient-to-br from-[#FFF1E6] to-[#FFE0C7] p-5 sm:p-8">
+              <div className="relative flex h-[240px] w-full max-w-[360px] items-center justify-center rounded-3xl bg-white/80 p-6 sm:h-[300px]">
                 {dealPct > 0 && (
                   <span className="absolute left-4 top-4 rounded-full bg-red-500 px-3 py-1 text-[12px] font-bold text-white">Save {dealPct}%</span>
                 )}
@@ -541,15 +944,15 @@ const Home = () => {
               </div>
             </div>
 
-            <div className="flex flex-col justify-center p-6 sm:p-8">
-              <Link to={`/product/${dealOfTheDay.id}`} className="text-[24px] font-extrabold leading-tight text-[#0B1B33] hover:text-[#FF6C00]">
+            <div className="flex flex-col justify-center p-5 sm:p-8">
+              <Link to={`/product/${dealOfTheDay.id}`} className="text-[22px] font-extrabold leading-tight text-[#0B1B33] hover:text-[#FF6C00] sm:text-[24px]">
                 {dealOfTheDay.name}
               </Link>
               <p className="mt-2 line-clamp-3 text-[14px] leading-relaxed text-gray-600">{dealOfTheDay.description}</p>
 
               <div className="mt-5 flex items-baseline gap-3">
-                <span className="text-[38px] font-black leading-none text-[#D94F00]">${dealOfTheDay.price}</span>
-                {dealOfTheDay.oldPrice && <span className="text-[20px] text-gray-400 line-through">${dealOfTheDay.oldPrice}</span>}
+                <span className="text-[32px] font-black leading-none text-[#D94F00] sm:text-[38px]">{formatMoney(dealOfTheDay.price)}</span>
+                {dealOfTheDay.oldPrice && <span className="text-[18px] text-gray-400 line-through sm:text-[20px]">{formatMoney(dealOfTheDay.oldPrice)}</span>}
               </div>
 
               <div className="mt-5">
@@ -569,12 +972,12 @@ const Home = () => {
                 <button
                   type="button"
                   onClick={() => handleAddToCart(dealOfTheDay)}
-                  className="flex min-w-[200px] flex-1 items-center justify-center gap-2 rounded-xl bg-[#FF6C00] px-6 py-3.5 text-[14px] font-bold text-white transition-colors hover:bg-[#E65C00]"
+                  className="flex min-w-[200px] flex-1 items-center justify-center gap-2 rounded-xl bg-[#FF6C00] px-6 py-3.5 text-[14px] font-bold text-white transition-colors hover:bg-[#E65C00] active:scale-[0.99]"
                 >
                   <FiShoppingCart /> Add to cart
-                  {dealOfTheDay.oldPrice ? ` · save $${dealOfTheDay.oldPrice - dealOfTheDay.price}` : ''}
+                  {dealOfTheDay.oldPrice ? ` · save ${formatMoney(Number(dealOfTheDay.oldPrice) - Number(dealOfTheDay.price))}` : ''}
                 </button>
-                <button type="button" onClick={() => handleBuyOnWhatsapp(dealOfTheDay)} className="flex items-center justify-center gap-2 rounded-xl bg-[#25D366] px-5 py-3.5 text-[14px] font-bold text-white hover:bg-[#1DA851]">
+                <button type="button" onClick={() => handleBuyOnWhatsapp(dealOfTheDay)} className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-[#25D366] px-5 py-3.5 text-[14px] font-bold text-white hover:bg-[#1DA851] sm:flex-none">
                   <FaWhatsapp className="h-5 w-5" /> WhatsApp
                 </button>
                 <button type="button" onClick={() => handleShareProduct(dealOfTheDay)} aria-label="Share this deal" className="flex h-[50px] w-[50px] items-center justify-center rounded-xl bg-gray-100 text-gray-700 hover:bg-gray-200">
@@ -586,19 +989,19 @@ const Home = () => {
         </section>
 
         {/* ================= BRANDS ================= */}
-        <div className="mb-12 flex flex-wrap items-center justify-between gap-x-8 gap-y-4 rounded-2xl border border-gray-200 bg-white px-8 py-6 shadow-sm">
-          <span className="text-[13px] font-semibold text-gray-500">Top brands</span>
-          {brands.map((name) => (
-            <Link key={name} to="/shop" className="text-[18px] font-black tracking-tight text-gray-300 transition-colors hover:text-[#FF6C00]">
+        <div className="no-scrollbar mb-12 flex items-center gap-x-8 overflow-x-auto rounded-2xl border border-gray-200 bg-white px-6 py-5 shadow-sm md:flex-wrap md:justify-between md:gap-y-4 md:overflow-visible md:px-8 md:py-6">
+          <span className="flex-shrink-0 text-[13px] font-semibold text-gray-500">Top brands</span>
+          {BRANDS.map((name) => (
+            <Link key={name} to="/shop" className="flex-shrink-0 text-[18px] font-black tracking-tight text-gray-300 transition-colors hover:text-[#FF6C00]">
               {name}
             </Link>
           ))}
         </div>
 
         {/* ================= FEATURED PRODUCTS ================= */}
-        <section className="mb-12">
+        <section id="featured" className="mb-12 scroll-mt-4">
           <SectionHeader icon={Gift} title="Featured products" subtitle="Hand-picked by our team">
-            <div className="flex gap-1 rounded-xl bg-white p-1 ring-1 ring-gray-200" role="tablist">
+            <div className="no-scrollbar flex max-w-full gap-1 overflow-x-auto rounded-xl bg-white p-1 ring-1 ring-gray-200" role="tablist">
               {['BESTSELLERS', 'FEATURED', 'TRENDING'].map((tab) => (
                 <button
                   key={tab}
@@ -606,7 +1009,7 @@ const Home = () => {
                   role="tab"
                   aria-selected={activeTab === tab}
                   onClick={() => setActiveTab(tab)}
-                  className={`rounded-lg px-4 py-2 text-[12.5px] font-semibold capitalize transition-colors ${activeTab === tab ? 'bg-[#0B1B33] text-white' : 'text-gray-600 hover:text-[#FF6C00]'}`}
+                  className={`whitespace-nowrap rounded-lg px-3.5 py-2 text-[12.5px] font-semibold capitalize transition-colors sm:px-4 ${activeTab === tab ? 'bg-[#0B1B33] text-white' : 'text-gray-600 hover:text-[#FF6C00]'}`}
                 >
                   {tab.toLowerCase()}
                 </button>
@@ -614,7 +1017,7 @@ const Home = () => {
             </div>
           </SectionHeader>
 
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+          <div className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
             {tabbedProducts.map((product) => (
               <ProductCard
                 key={product.id}
@@ -629,47 +1032,64 @@ const Home = () => {
         </section>
 
         {/* ================= NEW ARRIVALS ================= */}
-        <section className="mb-4">
+        <section id="new" className="mb-4 scroll-mt-4">
           <SectionHeader icon={Sparkles} title="New arrivals" subtitle="Just landed in store" action={{ to: '/shop', label: 'View all' }} />
-          <div className="grid grid-cols-2 gap-4 md:grid-cols-3 xl:grid-cols-6">
+          <ScrollRow className="md:grid-cols-3 xl:grid-cols-6">
             {newArrivals.map((product) => (
-              <Link
-                key={product.id}
-                to={`/product/${product.id}`}
-                className="group rounded-2xl border border-gray-200 bg-white p-3 transition-all hover:border-orange-200 hover:shadow-lg"
-              >
-                <div className="relative mb-3 flex h-32 items-center justify-center overflow-hidden rounded-xl bg-[#F6F7F9]">
-                  <span className="absolute left-2 top-2 rounded-full bg-purple-600 px-2 py-0.5 text-[10px] font-bold text-white">New</span>
-                  <img src={product.image} alt={product.name} loading="lazy" className="max-h-full max-w-full object-contain p-2 mix-blend-multiply transition-transform duration-500 group-hover:scale-105" />
-                </div>
-                <h3 className="line-clamp-2 min-h-[2.25rem] text-[12.5px] font-semibold leading-snug text-[#0B1B33]">{product.name}</h3>
-                <div className="mt-2 flex items-center justify-between">
-                  <span className="text-[15px] font-extrabold text-[#0B1B33]">${product.price}</span>
-                  <button
-                    type="button"
-                    onClick={(e) => { e.preventDefault(); handleAddToCart(product); }}
-                    aria-label={`Add ${product.name} to cart`}
-                    className="flex h-8 w-8 items-center justify-center rounded-lg bg-gray-100 text-gray-700 transition-colors hover:bg-[#FF6C00] hover:text-white"
-                  >
-                    <FiShoppingCart className="h-4 w-4" />
-                  </button>
-                </div>
-              </Link>
+              <RowItem key={product.id} className="w-[42%] min-w-[140px] max-w-[200px]">
+                <Link
+                  to={`/product/${product.id}`}
+                  className="group w-full rounded-2xl border border-gray-200 bg-white p-3 transition-all hover:border-orange-200 hover:shadow-lg"
+                >
+                  <div className="relative mb-3 flex h-32 items-center justify-center overflow-hidden rounded-xl bg-[#F6F7F9]">
+                    <span className="absolute left-2 top-2 rounded-full bg-purple-600 px-2 py-0.5 text-[10px] font-bold text-white">New</span>
+                    <img src={product.image} alt={product.name} loading="lazy" className="max-h-full max-w-full object-contain p-2 mix-blend-multiply transition-transform duration-500 group-hover:scale-105" />
+                  </div>
+                  <h3 className="line-clamp-2 min-h-[2.25rem] text-[12.5px] font-semibold leading-snug text-[#0B1B33]">{product.name}</h3>
+                  <div className="mt-2 flex items-center justify-between">
+                    <span className="text-[15px] font-extrabold text-[#0B1B33]">{formatMoney(product.price)}</span>
+                    <button
+                      type="button"
+                      onClick={(e) => { e.preventDefault(); handleAddToCart(product); }}
+                      aria-label={`Add ${product.name} to cart`}
+                      className="flex h-8 w-8 items-center justify-center rounded-lg bg-gray-100 text-gray-700 transition-colors hover:bg-[#FF6C00] hover:text-white active:scale-95"
+                    >
+                      <FiShoppingCart className="h-4 w-4" />
+                    </button>
+                  </div>
+                </Link>
+              </RowItem>
             ))}
-          </div>
+          </ScrollRow>
         </section>
       </div>
 
-      {/* ================= SHARE MODAL ================= */}
+      {/* ================= SIDE NAV DRAWER + TAB BAR (phones & tablets) ================= */}
+      <CategoryDrawer open={drawerOpen} onClose={() => setDrawerOpen(false)} onJump={jumpTo} />
+      <MobileTabBar
+        cartCount={cartCount}
+        drawerOpen={drawerOpen}
+        onHome={() => {
+          setDrawerOpen(false);
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        }}
+        onCategories={() => setDrawerOpen(true)}
+      />
+
+      {/* ================= SHARE SHEET ================= */}
       {showShareModal && shareProduct && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-[#0B1B33]/60 p-4 backdrop-blur-sm"
+          className="fixed inset-0 z-[70] flex items-end justify-center bg-[#0B1B33]/60 backdrop-blur-sm sm:items-center sm:p-4"
           onClick={() => setShowShareModal(false)}
           role="dialog"
           aria-modal="true"
           aria-label="Share product"
         >
-          <div className="w-full max-w-md rounded-3xl bg-white p-6 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+          <div
+            className="w-full max-w-md rounded-t-3xl bg-white p-5 pb-[calc(1.25rem+env(safe-area-inset-bottom))] shadow-2xl [animation:sheetUp_0.25s_ease-out] sm:rounded-3xl sm:p-6"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="mx-auto mb-3 h-1 w-10 rounded-full bg-gray-200 sm:hidden" />
             <div className="mb-1 flex items-center justify-between">
               <h3 className="text-[18px] font-bold text-[#0B1B33]">Share this product</h3>
               <button type="button" onClick={() => setShowShareModal(false)} aria-label="Close" className="flex h-9 w-9 items-center justify-center rounded-full text-gray-500 hover:bg-gray-100">
@@ -682,14 +1102,15 @@ const Home = () => {
             </div>
             <div className="grid grid-cols-3 gap-3">
               {[
-                { label: 'WhatsApp', icon: FaWhatsapp, color: 'text-[#25D366]', onClick: () => { handleBuyOnWhatsapp(shareProduct); setShowShareModal(false); } },
+                { label: 'WhatsApp', icon: FaWhatsapp, color: 'text-[#25D366]', onClick: shareOnWhatsapp },
                 { label: 'Facebook', icon: FaFacebook, color: 'text-[#1877F2]', onClick: shareOnFacebook },
                 { label: 'Twitter', icon: FaTwitter, color: 'text-[#1DA1F2]', onClick: shareOnTwitter },
                 { label: 'LinkedIn', icon: FaLinkedin, color: 'text-[#0A66C2]', onClick: shareOnLinkedIn },
                 { label: 'Telegram', icon: FaTelegram, color: 'text-[#229ED9]', onClick: shareOnTelegram },
                 { label: copied ? 'Copied' : 'Copy link', icon: copied ? FiCheck : FiShare2, color: copied ? 'text-emerald-600' : 'text-gray-600', onClick: copyLink },
+                ...(canNativeShare ? [{ label: 'More…', icon: FiMoreHorizontal, color: 'text-gray-600', onClick: shareNative }] : []),
               ].map(({ label, icon: Icon, color, onClick }) => (
-                <button key={label} type="button" onClick={onClick} className="flex flex-col items-center gap-2 rounded-2xl border border-gray-100 p-3.5 transition-colors hover:border-orange-200 hover:bg-orange-50">
+                <button key={label} type="button" onClick={onClick} className="flex flex-col items-center gap-2 rounded-2xl border border-gray-100 p-3.5 transition-colors hover:border-orange-200 hover:bg-orange-50 active:bg-orange-100">
                   <Icon className={`h-7 w-7 ${color}`} />
                   <span className="text-[12px] font-medium text-gray-700">{label}</span>
                 </button>
@@ -699,15 +1120,25 @@ const Home = () => {
         </div>
       )}
 
-      {/* ================= FLOATING WHATSAPP ================= */}
+      {/* ================= TOAST ================= */}
+      <div role="status" aria-live="polite" className="pointer-events-none fixed inset-x-0 bottom-24 z-[80] flex justify-center px-4 lg:bottom-6">
+        {toast && (
+          <div className="pointer-events-auto flex max-w-full items-center gap-2 rounded-full bg-[#0B1B33] px-4 py-2.5 text-[13px] font-medium text-white shadow-lg">
+            <FiCheck className="h-4 w-4 flex-shrink-0 text-emerald-400" />
+            <span className="truncate">{toast}</span>
+          </div>
+        )}
+      </div>
+
+      {/* ================= FLOATING WHATSAPP (desktop; phones use the tab bar) ================= */}
       <a
-        href="https://wa.me/"
+        href={waLink()}
         target="_blank"
         rel="noreferrer"
         aria-label="Chat with us on WhatsApp"
-        className="fixed bottom-5 right-5 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-[#25D366] text-white shadow-lg shadow-green-500/30 transition-transform hover:scale-105"
+        className="fixed bottom-5 right-5 z-40 hidden h-14 w-14 items-center justify-center rounded-full bg-[#25D366] text-white shadow-lg shadow-green-500/30 transition-transform hover:scale-105 lg:flex"
       >
-        <MessageCircle className="h-6 w-6" />
+        <FaWhatsapp className="h-7 w-7" />
       </a>
     </div>
   );
