@@ -10,6 +10,10 @@ import { useCart } from '../context/CartContext';
 import products from '../data/products';
 
 /* ---------- helpers ---------- */
+// Currency: Rwandan franc. Amounts are shown exactly as stored in your product data.
+const CURRENCY = 'FRW';
+const formatMoney = (value) => `${CURRENCY} ${Math.round(Number(value) || 0).toLocaleString('en-US')}`;
+
 const CATEGORY_LABELS = { audio: 'TVs & Audio', appliances: 'Home Appliances' };
 const labelFor = (key) =>
   CATEGORY_LABELS[key] || key.replace(/[-_]/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
@@ -77,8 +81,8 @@ const ShopCard = ({ product, view, onAdd, onWhatsapp }) => {
         </div>
 
         <div className="mt-2 flex items-baseline gap-2">
-          <span className="text-[19px] font-extrabold text-[#0B1B33]">${Number(product.price).toFixed(2)}</span>
-          {pct > 0 && <span className="text-[12.5px] text-gray-400 line-through">${Number(product.oldPrice).toFixed(2)}</span>}
+          <span className="text-[19px] font-extrabold text-[#0B1B33]">{formatMoney(product.price)}</span>
+          {pct > 0 && <span className="text-[12.5px] text-gray-400 line-through">{formatMoney(product.oldPrice)}</span>}
         </div>
 
         <div className={`mt-3 flex gap-2 ${isList ? 'max-w-[360px]' : ''} ${isList ? '' : 'mt-auto pt-1'}`}>
@@ -111,7 +115,12 @@ const Shop = () => {
   const category = normalize(searchParams.get('category'));
   const urlSearch = searchParams.get('search') || '';
 
-  const maxPrice = useMemo(() => Math.max(100, Math.ceil(Math.max(...products.map((p) => Number(p.price) || 0)) / 50) * 50), []);
+  // Slider range + step adapt to the size of your prices (FRW amounts are large).
+  const { maxPrice, priceStep } = useMemo(() => {
+    const highest = Math.max(0, ...products.map((p) => Number(p.price) || 0));
+    const step = highest >= 100000 ? 1000 : highest >= 10000 ? 100 : 10;
+    return { maxPrice: Math.max(step * 10, Math.ceil(highest / step) * step), priceStep: step };
+  }, []);
 
   const [searchText, setSearchText] = useState(urlSearch);
   const [price, setPrice] = useState([0, maxPrice]);
@@ -201,14 +210,14 @@ const Shop = () => {
 
   const handleWhatsapp = (product) => {
     const url = `${window.location.origin}/product/${product.id}`;
-    const msg = `Hi! I'm interested in: ${product.name} - Price: $${product.price}. Please provide more details. ${url}`;
+    const msg = `Hi! I'm interested in: ${product.name} - Price: ${formatMoney(product.price)}. Please provide more details. ${url}`;
     window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, '_blank');
   };
 
   const activeChips = [
     category && { key: 'category', label: labelFor(category), clear: () => setParam('category', '') },
     urlSearch && { key: 'search', label: `"${urlSearch}"`, clear: () => setParam('search', '') },
-    (price[0] > 0 || price[1] < maxPrice) && { key: 'price', label: `$${price[0]} – $${price[1]}`, clear: () => setPrice([0, maxPrice]) },
+    (price[0] > 0 || price[1] < maxPrice) && { key: 'price', label: `${formatMoney(price[0])} – ${formatMoney(price[1])}`, clear: () => setPrice([0, maxPrice]) },
     ...brandsSel.map((b) => ({ key: `brand-${b}`, label: b, clear: () => toggleBrand(b) })),
     minRating > 0 && { key: 'rating', label: `${minRating}★ & up`, clear: () => setMinRating(0) },
     onlyDeals && { key: 'deals', label: 'On sale', clear: () => setOnlyDeals(false) },
@@ -247,7 +256,7 @@ const Shop = () => {
             type="range"
             min="0"
             max={maxPrice}
-            step="10"
+            step={priceStep}
             value={price[1]}
             onChange={(e) => setPrice([price[0], Math.max(Number(e.target.value), price[0])])}
             aria-label="Maximum price"
@@ -257,7 +266,7 @@ const Shop = () => {
             <label className="flex-1">
               <span className="sr-only">Minimum price</span>
               <div className="flex items-center rounded-lg border-2 border-gray-200 px-3 focus-within:border-[#FF6C00]">
-                <span className="text-[13px] text-gray-400">$</span>
+                <span className="text-[12px] font-semibold text-gray-400">{CURRENCY}</span>
                 <input
                   type="number"
                   min="0"
@@ -271,7 +280,7 @@ const Shop = () => {
             <label className="flex-1">
               <span className="sr-only">Maximum price</span>
               <div className="flex items-center rounded-lg border-2 border-gray-200 px-3 focus-within:border-[#FF6C00]">
-                <span className="text-[13px] text-gray-400">$</span>
+                <span className="text-[12px] font-semibold text-gray-400">{CURRENCY}</span>
                 <input
                   type="number"
                   min="0"
