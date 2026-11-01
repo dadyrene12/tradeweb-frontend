@@ -19,9 +19,19 @@ const skipRefresh = [
   '/auth/reset-password',
 ];
 
+const hasCookie = (name) =>
+  typeof document !== 'undefined' && document.cookie.split('; ').some((item) => item.startsWith(`${name}=`));
+
 let refreshPromise = null;
 
 const refreshSession = () => {
+  if (!hasCookie('refreshToken')) {
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new Event('auth:session-expired'));
+    }
+    return Promise.reject(new Error('NO_REFRESH_TOKEN'));
+  }
+
   if (!refreshPromise) {
     refreshPromise = api.post('/auth/refresh').finally(() => {
       refreshPromise = null;
