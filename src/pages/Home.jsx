@@ -862,8 +862,8 @@ const Home = () => {
           >
             {heroSlides.map((s, idx) => (
               <div key={idx} aria-hidden={idx !== heroSlide} className={`absolute inset-0 transition-opacity duration-1000 ${idx === heroSlide ? 'z-10 opacity-100' : 'pointer-events-none z-0 opacity-0'}`}>
-                <img src={s.image} alt="" aria-hidden="true" className="absolute inset-0 h-full w-full scale-150 object-cover blur-3xl brightness-95 saturate-150" />
-                <div className="absolute inset-0 bg-gradient-to-r from-[#0B1B33] via-[#0B1B33]/75 to-[#0B1B33]/20" />
+                <img src={s.image} alt="" aria-hidden="true" className="absolute gitinset-0 h-full w-full scale-150 object-cover blur-3xl brightness-95 saturate-150" />
+                <div className="absolute inset-0  bg-orange-500" />
                 <div className="absolute inset-0 opacity-40" style={{ backgroundImage: 'radial-gradient(rgba(255,255,255,0.12) 1px, transparent 1px)', backgroundSize: '20px 20px' }} />
                 <div className="absolute -bottom-24 right-[8%] h-64 w-64 rounded-full bg-[#FF6C00]/40 blur-3xl" />
 
@@ -886,8 +886,8 @@ const Home = () => {
                       <Sparkles className="h-3 w-3" />
                       {s.tag}
                     </span>
-                    <h2 className="mt-2.5 line-clamp-3 text-[20px] font-extrabold leading-[1.15] tracking-tight text-white sm:mt-3 sm:text-[22px] lg:text-[26px]">{s.title}</h2>
-                    <p className="mt-1.5 line-clamp-2 text-[12.5px] font-medium leading-snug text-white/70 sm:text-[13px]">{s.highlight}</p>
+                    <h2 className="mt-2.5 line-clamp-2 text-[20px] font-extrabold leading-[1.15] tracking-tight text-white sm:mt-3 sm:line-clamp-3 sm:text-[22px] lg:text-[26px]">{s.title}</h2>
+                    <p className="mt-1.5 line-clamp-1 text-[12.5px] font-medium leading-snug text-white/70 sm:line-clamp-2 sm:text-[13px]">{s.highlight}</p>
 
                     <div className="mt-3 flex items-end gap-2.5">
                       <span className="text-[25px] font-extrabold leading-none text-white sm:text-[28px]">{s.price}</span>
@@ -899,7 +899,7 @@ const Home = () => {
                       <ArrowRight className="h-4 w-4" />
                     </Link>
 
-                    <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-[11.5px] font-medium text-white/70">
+                    <div className="mt-4 hidden flex-wrap items-center gap-x-4 gap-y-1.5 text-[11.5px] font-medium text-white/70 sm:flex">
                       <span className="flex items-center gap-1.5"><Truck className="h-3.5 w-3.5 text-[#FF9A4D]" /> Free delivery</span>
                       <span className="flex items-center gap-1.5"><ShieldCheck className="h-3.5 w-3.5 text-[#FF9A4D]" /> Warranty included</span>
                     </div>
