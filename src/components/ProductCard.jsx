@@ -4,6 +4,7 @@ import { FiHeart, FiShoppingCart, FiEye, FiRefreshCw, FiShare2, FiX } from 'reac
 import { AiFillStar } from 'react-icons/ai';
 import { FaWhatsapp, FaFacebook, FaTwitter, FaLinkedin, FaTelegram } from 'react-icons/fa';
 import { useCart } from '../context/CartContext';
+import { formatMoney } from '../lib/currency';
 
 const ProductCard = ({ product }) => {
   const { id, name, price, oldPrice, image, rating = 5 } = product;
@@ -20,7 +21,7 @@ const ProductCard = ({ product }) => {
 
   const handleBuyOnWhatsapp = (e) => {
     e.preventDefault();
-    const message = `Hi! I'm interested in: ${name} - Price: $${price}. Please provide more details. ${productUrl}`;
+    const message = `Hi! I'm interested in: ${name} - Price: ${formatMoney(price)}. Please provide more details. ${productUrl}`;
     const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(message)}`;
     window.open(whatsappUrl, '_blank');
   };
@@ -35,7 +36,7 @@ const ProductCard = ({ product }) => {
   };
 
   const shareOnTwitter = () => {
-    const text = `Check out ${name} - $${price}`;
+    const text = `Check out ${name} - ${formatMoney(price)}`;
     window.open(`https://twitter.com/intent/tweet?url=${encodeURIComponent(productUrl)}&text=${encodeURIComponent(text)}`, '_blank');
   };
 
@@ -44,7 +45,7 @@ const ProductCard = ({ product }) => {
   };
 
   const shareOnTelegram = () => {
-    const text = `Check out ${name} - $${price} ${productUrl}`;
+    const text = `Check out ${name} - ${formatMoney(price)} ${productUrl}`;
     window.open(`https://t.me/share/url?url=${encodeURIComponent(productUrl)}&text=${encodeURIComponent(text)}`, '_blank');
   };
 
@@ -98,9 +99,9 @@ const ProductCard = ({ product }) => {
           </h3>
         </Link>
         <div className="flex items-center gap-2 mb-3">
-          <span className="text-lg font-bold text-[#1e73be]">${price.toLocaleString()}</span>
+          <span className="text-lg font-bold text-[#1e73be]">{formatMoney(price)}</span>
           {oldPrice && (
-            <span className="text-sm text-gray-400 line-through">${oldPrice.toLocaleString()}</span>
+            <span className="text-sm text-gray-400 line-through">{formatMoney(oldPrice)}</span>
           )}
         </div>
         <div className="flex flex-col gap-2">

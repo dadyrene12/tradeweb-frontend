@@ -311,7 +311,7 @@ export const getDiscountedProducts = () =>
     }));
 
 export const formatPrice = (value) =>
-  `$${Number(value || 0).toLocaleString(undefined, {
+  `FRW ${Number(value || 0).toLocaleString(undefined, {
     minimumFractionDigits: 0,
     maximumFractionDigits: 2,
   })}`;

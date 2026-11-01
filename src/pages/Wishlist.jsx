@@ -1,6 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { FiHeart, FiTrash2, FiShoppingCart } from 'react-icons/fi';
+import { formatMoney } from '../lib/currency';
 
 const Wishlist = () => {
   const wishlistItems = [
@@ -49,7 +50,7 @@ const Wishlist = () => {
                           </Link>
                         </div>
                       </td>
-                      <td className="py-4 px-6 text-lg font-bold text-[#1e73be]">${item.price}</td>
+                      <td className="py-4 px-6 text-lg font-bold text-[#1e73be]">{formatMoney(item.price)}</td>
                       <td className="py-4 px-6">
                         <button className="flex items-center gap-2 bg-[#1e73be] text-white px-4 py-2 rounded-lg hover:bg-[#1a5f9e] transition-colors">
                           <FiShoppingCart className="w-4 h-4" /> Add to Cart

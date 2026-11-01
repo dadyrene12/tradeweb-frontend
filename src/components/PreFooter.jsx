@@ -19,7 +19,7 @@ const PreFooter = () => {
     {
       icon: Globe2,
       title: 'Fast Delivery',
-      desc: 'Fast delivery in Kigali and across Rwanda. Register to get $10 coupons.',
+      desc: 'Fast delivery in Kigali and across Rwanda. Register to get FRW 10 coupons.',
     },
     {
       icon: ShieldCheck,

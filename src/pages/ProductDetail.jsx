@@ -7,6 +7,7 @@ import {
 import { FaWhatsapp, FaFacebook, FaTwitter, FaLinkedin, FaTelegram, FaStar, FaRegStar } from 'react-icons/fa';
 import { useCart } from '../context/CartContext';
 import api from '../lib/api';
+import { formatMoney } from '../lib/currency';
 import { toStoreProduct } from '../lib/productMapper';
 import fallbackProducts, { getProductById } from '../data/products';
 
@@ -33,7 +34,7 @@ const Toast = ({ message, onDone }) => {
   );
 };
 
-const money = (n) => `$${Number(n).toFixed(2).replace(/\.00$/, '')}`;
+const isObjectId = (value) => /^[a-f0-9]{24}$/i.test(String(value || ''));
 
 /* ---------- main component ---------- */
 
@@ -51,14 +52,16 @@ const ProductDetail = () => {
 
     setProduct(getProductById(id) || fallbackProducts[0]);
 
-    api
-      .get(`/products/${id}`)
-      .then(({ data }) => {
-        if (active && data && data._id) {
-          setProduct(toStoreProduct(data));
-        }
-      })
-      .catch(() => {});
+    if (isObjectId(id)) {
+      api
+        .get(`/products/${id}`)
+        .then(({ data }) => {
+          if (active && data && data._id) {
+            setProduct(toStoreProduct(data));
+          }
+        })
+        .catch(() => {});
+    }
 
     api
       .get('/products', { params: { limit: 100 } })
@@ -151,7 +154,7 @@ const ProductDetail = () => {
     const message =
       `Hi! I'd like to order:\n${product.name}\nQuantity: ${qty}\n` +
       (options ? `${options}\n` : '') +
-      `Total: ${money(product.price * qty)}\n${productUrl}`;
+      `Total: ${formatMoney(product.price * qty)}\n${productUrl}`;
     window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, '_blank');
   };
 
@@ -163,7 +166,7 @@ const ProductDetail = () => {
   const openShare = async () => {
     if (navigator.share) {
       try {
-        await navigator.share({ title: product.name, text: `${product.name} - ${money(product.price)}`, url: productUrl });
+        await navigator.share({ title: product.name, text: `${product.name} - ${formatMoney(product.price)}`, url: productUrl });
         return;
       } catch (e) {
         if (e.name === 'AbortError') return;
@@ -173,7 +176,7 @@ const ProductDetail = () => {
   };
 
   const open = (url) => window.open(url, '_blank', 'noopener,noreferrer');
-  const shareText = `Check out ${product.name} - ${money(product.price)}`;
+  const shareText = `Check out ${product.name} - ${formatMoney(product.price)}`;
   const shareTargets = [
     { label: 'WhatsApp', icon: FaWhatsapp, color: 'text-green-500', run: () => open(`https://wa.me/?text=${encodeURIComponent(`${shareText} ${productUrl}`)}`) },
     { label: 'Facebook', icon: FaFacebook, color: 'text-blue-600', run: () => open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(productUrl)}`) },
@@ -304,12 +307,12 @@ const ProductDetail = () => {
               </div>
 
               <div className="flex items-end gap-3 mt-5">
-                <span className="text-4xl font-bold text-gray-900">{money(product.price)}</span>
+                <span className="text-4xl font-bold text-gray-900">{formatMoney(product.price)}</span>
                 {product.oldPrice && (
                   <>
-                    <span className="text-xl text-gray-400 line-through mb-0.5">{money(product.oldPrice)}</span>
+                    <span className="text-xl text-gray-400 line-through mb-0.5">{formatMoney(product.oldPrice)}</span>
                     <span className="mb-1 bg-red-50 text-red-600 px-2 py-0.5 rounded text-sm font-semibold">
-                      You save {money(product.oldPrice - product.price)}
+                      You save {formatMoney(product.oldPrice - product.price)}
                     </span>
                   </>
                 )}
@@ -393,7 +396,7 @@ const ProductDetail = () => {
                       <FiPlus className="w-4 h-4" />
                     </button>
                   </div>
-                  <p className="text-sm text-gray-500">Total: <span className="font-semibold text-gray-900">{money(product.price * qty)}</span></p>
+                  <p className="text-sm text-gray-500">Total: <span className="font-semibold text-gray-900">{formatMoney(product.price * qty)}</span></p>
                 </div>
 
                 <div className="flex flex-col sm:flex-row gap-3">
@@ -539,8 +542,8 @@ const ProductDetail = () => {
                   <div className="p-3">
                     <p className="text-sm text-gray-900 font-medium line-clamp-2 min-h-[2.5rem]">{p.name}</p>
                     <div className="flex items-center gap-2 mt-1">
-                      <span className="font-bold text-[#1e73be]">{money(p.price)}</span>
-                      {p.oldPrice && <span className="text-xs text-gray-400 line-through">{money(p.oldPrice)}</span>}
+                      <span className="font-bold text-[#1e73be]">{formatMoney(p.price)}</span>
+                      {p.oldPrice && <span className="text-xs text-gray-400 line-through">{formatMoney(p.oldPrice)}</span>}
                     </div>
                   </div>
                 </Link>
@@ -554,7 +557,7 @@ const ProductDetail = () => {
       <div className={`md:hidden fixed bottom-0 inset-x-0 z-40 bg-white border-t border-gray-200 px-4 py-3 flex items-center gap-3 transition-transform duration-300 ${showStickyBar ? 'translate-y-0' : 'translate-y-full'}`}>
         <div className="min-w-0">
           <p className="text-xs text-gray-500 truncate">{product.name}</p>
-          <p className="font-bold text-gray-900">{money(product.price * qty)}</p>
+          <p className="font-bold text-gray-900">{formatMoney(product.price * qty)}</p>
         </div>
         <button onClick={handleAddToCart} disabled={outOfStock} className="ml-auto flex items-center gap-2 bg-[#1e73be] disabled:bg-gray-300 text-white px-5 py-2.5 rounded-lg font-semibold">
           <FiShoppingCart className="w-4 h-4" />

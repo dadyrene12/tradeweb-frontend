@@ -5,14 +5,13 @@ import { FiShoppingCart, FiX, FiChevronRight, FiPlus, FiStar, FiTrash2, FiCheck 
 import { FaWhatsapp } from 'react-icons/fa';
 import { Scale } from 'lucide-react';
 import { useCart } from '../context/CartContext';
+import { formatMoney } from '../lib/currency';
 
 /* -------------------------------------------------------------------------- */
 /*  Settings                                                                   */
 /* -------------------------------------------------------------------------- */
 const WHATSAPP_NUMBER = '250722189516';
 const MAX_ITEMS = 4;
-const CURRENCY = 'FRW';
-const formatMoney = (v) => `${CURRENCY} ${Math.round(Number(v) || 0).toLocaleString('en-US')}`;
 
 // Sample products. Replace with your compare list (from a context or the API).
 // Optional fields: oldPrice, category, specs: { Label: 'Value' } (extra rows appear automatically).

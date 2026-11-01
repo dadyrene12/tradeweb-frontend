@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import api from '../lib/api';
+import { CURRENCY, formatMoney } from '../lib/currency';
 import { toStoreProduct } from '../lib/productMapper';
 import {
   FiGrid, FiList, FiChevronRight, FiChevronLeft, FiSearch, FiX, FiStar,
@@ -13,9 +14,6 @@ import fallbackProducts from '../data/products';
 
 /* ---------- helpers ---------- */
 // Currency: Rwandan franc. Amounts are shown exactly as stored in your product data.
-const CURRENCY = 'FRW';
-const formatMoney = (value) => `${CURRENCY} ${Math.round(Number(value) || 0).toLocaleString('en-US')}`;
-
 const CATEGORY_LABELS = { audio: 'TVs & Audio', appliances: 'Home Appliances' };
 const labelFor = (key) =>
   CATEGORY_LABELS[key] || key.replace(/[-_]/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
@@ -54,11 +52,11 @@ const ShopCard = ({ product, view, onAdd, onWhatsapp }) => {
 
   return (
     <article
-      className={`group rounded-2xl border border-gray-200 bg-white p-3.5 transition-all duration-200 hover:border-orange-200 hover:shadow-[0_14px_34px_-14px_rgba(11,27,51,0.2)] ${isList ? 'flex gap-5' : 'flex flex-col'}`}
+      className={`group rounded-2xl border border-gray-200 bg-white p-3 transition-all duration-200 hover:border-orange-200 hover:shadow-[0_14px_34px_-14px_rgba(11,27,51,0.2)] sm:p-3.5 ${isList ? 'flex flex-col gap-4 sm:flex-row sm:gap-5' : 'flex flex-col'}`}
     >
       <Link
         to={`/product/${product.id}`}
-        className={`relative flex shrink-0 items-center justify-center overflow-hidden rounded-xl bg-[#F6F7F9] ${isList ? 'h-44 w-44 sm:h-48 sm:w-56' : 'mb-3 h-48'}`}
+        className={`relative flex shrink-0 items-center justify-center overflow-hidden rounded-xl bg-[#F6F7F9] ${isList ? 'h-44 w-full sm:h-48 sm:w-56' : 'mb-3 h-44 sm:h-48'}`}
       >
         {badge && <span className={`absolute left-2.5 top-2.5 z-10 rounded-full px-2.5 py-1 text-[10.5px] font-bold text-white ${badge.cls}`}>{badge.label}</span>}
         {pct > 0 && <span className="absolute right-2.5 top-2.5 z-10 rounded-full bg-white px-2 py-1 text-[10.5px] font-bold text-red-600 shadow-sm">-{pct}%</span>}
@@ -93,7 +91,9 @@ const ShopCard = ({ product, view, onAdd, onWhatsapp }) => {
             onClick={() => onAdd(product)}
             className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-[#0B1B33] py-2.5 text-[13px] font-semibold text-white transition-colors hover:bg-[#FF6C00] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#FF6C00]"
           >
-            <FiShoppingCart className="h-4 w-4" /> Add to cart
+            <FiShoppingCart className="h-4 w-4" />
+            <span className="sm:hidden">Add</span>
+            <span className="hidden sm:inline">Add to cart</span>
           </button>
           <button
             type="button"
@@ -415,7 +415,7 @@ const Shop = () => {
   }, [totalPages, currentPage]);
 
   return (
-    <div className="min-h-screen bg-[#F3F4F6]" style={{ fontFamily: "'Plus Jakarta Sans', 'Inter', system-ui, sans-serif" }}>
+    <div className="min-h-screen overflow-x-hidden bg-[#F3F4F6]" style={{ fontFamily: "'Plus Jakarta Sans', 'Inter', system-ui, sans-serif" }}>
       <style>{`@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');`}</style>
 
       {/* ---------- Page banner ---------- */}
@@ -423,7 +423,7 @@ const Shop = () => {
         <div className="pointer-events-none absolute -right-20 -top-24 h-72 w-72 rounded-full bg-[#FF6C00]/30 blur-3xl" />
         <div className="pointer-events-none absolute inset-0 opacity-40" style={{ backgroundImage: 'radial-gradient(rgba(255,255,255,0.1) 1px, transparent 1px)', backgroundSize: '22px 22px' }} />
         <div className="relative mx-auto max-w-[1400px] px-4 py-8 sm:px-6 lg:px-8">
-          <nav aria-label="Breadcrumb" className="mb-3 flex items-center gap-2 text-[12.5px] text-white/60">
+          <nav aria-label="Breadcrumb" className="mb-3 flex flex-wrap items-center gap-2 text-[12.5px] text-white/60">
             <Link to="/" className="transition-colors hover:text-white">Home</Link>
             <FiChevronRight className="h-3.5 w-3.5" />
             <span className="font-semibold text-white">Shop</span>

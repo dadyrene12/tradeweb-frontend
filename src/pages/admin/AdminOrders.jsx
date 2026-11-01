@@ -5,6 +5,7 @@ import {
   FiTrash2, FiShoppingBag, FiTruck, FiMapPin, FiPhone,
 } from 'react-icons/fi';
 import api, { getApiError } from '../../lib/api';
+import { formatMoney as money } from '../../lib/currency';
 
 const statuses = ['pending', 'processing', 'shipped', 'delivered', 'cancelled'];
 
@@ -26,14 +27,11 @@ const AdminOrders = () => {
   const [status, setStatus] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [currency, setCurrency] = useState('FRW');
 
   const [selected, setSelected] = useState(null);
   const [loadingOrder, setLoadingOrder] = useState(false);
   const [savingStatus, setSavingStatus] = useState(false);
   const [deleting, setDeleting] = useState(false);
-
-  const money = (value) => `${currency} ${Math.round(Number(value) || 0).toLocaleString('en-US')}`;
 
   useEffect(() => {
     const timeout = setTimeout(() => {
@@ -63,13 +61,6 @@ const AdminOrders = () => {
   useEffect(() => {
     loadOrders();
   }, [loadOrders]);
-
-  useEffect(() => {
-    api
-      .get('/settings')
-      .then(({ data }) => setCurrency(data.settings.currency || 'FRW'))
-      .catch(() => {});
-  }, []);
 
   const openOrder = async (order) => {
     setLoadingOrder(true);

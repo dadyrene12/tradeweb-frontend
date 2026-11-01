@@ -6,6 +6,7 @@ import {
 } from 'react-icons/fi';
 import { useAuth } from '../../context/AuthContext';
 import api, { getApiError } from '../../lib/api';
+import { formatMoney as money } from '../../lib/currency';
 
 const AdminUsers = () => {
   const { user: currentUser } = useAuth();
@@ -18,7 +19,6 @@ const AdminUsers = () => {
   const [role, setRole] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [currency, setCurrency] = useState('FRW');
 
   const [editing, setEditing] = useState(null);
   const [form, setForm] = useState({ name: '', role: 'user', isEmailVerified: false });
@@ -26,8 +26,6 @@ const AdminUsers = () => {
   const [saving, setSaving] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [deleting, setDeleting] = useState(false);
-
-  const money = (value) => `${currency} ${Math.round(Number(value) || 0).toLocaleString('en-US')}`;
 
   useEffect(() => {
     const timeout = setTimeout(() => {
@@ -57,13 +55,6 @@ const AdminUsers = () => {
   useEffect(() => {
     loadUsers();
   }, [loadUsers]);
-
-  useEffect(() => {
-    api
-      .get('/settings')
-      .then(({ data }) => setCurrency(data.settings.currency || 'FRW'))
-      .catch(() => {});
-  }, []);
 
   const openEdit = (user) => {
     setEditing(user);

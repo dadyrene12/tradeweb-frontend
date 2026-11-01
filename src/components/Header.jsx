@@ -10,6 +10,7 @@ import { FaWhatsapp } from 'react-icons/fa';
 import { Tv, WashingMachine, Refrigerator, CookingPot, Speaker, Blend, Flame, House } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
+import { formatMoney } from '../lib/currency';
 
 const PHONE_DISPLAY = '+250 722 189 516';
 const WHATSAPP_LINK = 'https://wa.me/250722189516';
@@ -147,7 +148,7 @@ const Header = () => {
           <div className="flex items-center gap-5 text-white/80">
             <span className="flex items-center gap-2">
               <FiTruck className="h-4 w-4 text-[#FF6C00]" />
-              Free shipping on orders over $99
+              Free shipping on orders over FRW 100,000
             </span>
             <span className="h-3 w-px bg-white/20" />
             <span className="flex items-center gap-2">
@@ -237,7 +238,7 @@ const Header = () => {
                 </span>
                 <span className="hidden text-left leading-tight sm:block">
                   <span className="block text-[11px] text-white/65 group-hover:text-white/85">My cart</span>
-                  <span className="block text-[14px] font-bold">${getCartTotal().toFixed(2)}</span>
+                  <span className="block text-[14px] font-bold">{formatMoney(getCartTotal())}</span>
                 </span>
               </Link>
             </div>

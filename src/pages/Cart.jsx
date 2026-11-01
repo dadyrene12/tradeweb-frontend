@@ -18,6 +18,7 @@ import {
 } from 'react-icons/fi';
 import { FaWhatsapp } from 'react-icons/fa';
 import { useCart } from '../context/CartContext';
+import { formatMoney } from '../lib/currency'; // single import: do NOT declare formatMoney again below
 
 /* -------------------------------------------------------------------------- */
 /*  Store settings – edit these to match your business                         */
@@ -25,16 +26,15 @@ import { useCart } from '../context/CartContext';
 const STORE = {
   whatsappNumber: '15551234567', // international format, digits only (no + or spaces)
   email: 'orders@yourstore.com',
-  currency: 'USD',
-  freeShippingThreshold: 100, // order value that unlocks free shipping
-  shippingFee: 5, // set to 0 to make shipping always free
+  freeShippingThreshold: 100000, // order value that unlocks free shipping
+  shippingFee: 0, // set to 0 to make shipping always free
   maxQuantity: 99,
 };
 
 // NOTE: client-side only. Re-validate real discounts on your server.
 const COUPONS = {
   WELCOME10: { type: 'percent', value: 10, label: '10% off' },
-  SAVE5: { type: 'fixed', value: 5, label: '$5 off' },
+  SAVE5: { type: 'fixed', value: 5, label: 'FRW 5 off' },
 };
 
 const CHANNELS = [
@@ -46,9 +46,6 @@ const CHANNELS = [
 /*  Helpers                                                                    */
 /* -------------------------------------------------------------------------- */
 const STORAGE_KEY = 'cart_checkout_prefs_v1';
-
-const formatMoney = (value) =>
-  new Intl.NumberFormat('en-US', { style: 'currency', currency: STORE.currency }).format(Number(value) || 0);
 
 const makeOrderRef = () => `ORD-${Date.now().toString(36).toUpperCase().slice(-6)}`;
 

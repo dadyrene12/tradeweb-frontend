@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import api from '../lib/api';
+import { formatMoney } from '../lib/currency';
 import { toStoreProduct } from '../lib/productMapper';
 import fallbackProducts, { getDiscountedProducts } from '../data/products';
 
@@ -20,9 +21,7 @@ const WHATSAPP_NUMBER = '';
 const waLink = (text) => `https://wa.me/${WHATSAPP_NUMBER}${text ? `?text=${encodeURIComponent(text)}` : ''}`;
 
 const CART_ROUTE = '/cart';
-const CURRENCY = 'FRW';
 const FREE_SHIPPING_THRESHOLD = 100000; // keep in sync with the cart page
-const formatMoney = (value) => `${CURRENCY} ${Math.round(Number(value) || 0).toLocaleString('en-US')}`;
 
 /* -------------------------------------------------------------------------- */
 /*  Static data                                                                */
@@ -336,7 +335,7 @@ const SectionHeader = ({ icon: Icon, title, subtitle, action, children }) => (
 
 /** Horizontal snap-scroll row on phones that becomes a normal grid from `md` up. */
 const ScrollRow = ({ className = '', children }) => (
-  <div className={`no-scrollbar -mx-4 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-2 sm:mx-0 sm:px-0 md:grid md:gap-4 md:overflow-visible md:pb-0 ${className}`}>
+  <div className={`no-scrollbar -mx-4 flex snap-x snap-mandatory gap-3 overflow-x-auto scroll-px-4 px-4 pb-2 sm:mx-0 sm:px-0 md:grid md:gap-4 md:overflow-visible md:pb-0 ${className}`}>
     {children}
   </div>
 );
@@ -814,16 +813,16 @@ const Home = () => {
       <div className="mx-auto max-w-[1400px] px-4 py-4 sm:px-6 sm:py-6 lg:px-8">
 
         {/* ================= MOBILE CATEGORY STRIP ================= */}
-        <nav aria-label="Categories" className="no-scrollbar -mx-4 mb-4 flex gap-3 overflow-x-auto px-4 pb-1 lg:hidden">
-          <button type="button" onClick={() => setDrawerOpen(true)} className="flex w-[68px] flex-shrink-0 flex-col items-center gap-1.5 active:scale-95">
-            <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-[#FF6C00] to-[#FF8A2B] text-white shadow-md shadow-orange-500/30">
+        <nav aria-label="Categories" className="no-scrollbar -mx-4 mb-4 flex snap-x snap-mandatory gap-3 overflow-x-auto scroll-px-4 px-4 pb-1 lg:hidden">
+          <button type="button" onClick={() => setDrawerOpen(true)} className="flex w-[64px] flex-shrink-0 snap-start flex-col items-center gap-1.5 active:scale-95">
+            <span className="flex h-[52px] w-[52px] items-center justify-center rounded-2xl bg-gradient-to-br from-[#FF6C00] to-[#FF8A2B] text-white shadow-md shadow-orange-500/30">
               <LayoutGrid className="h-6 w-6" strokeWidth={2} />
             </span>
             <span className="text-[11px] font-bold text-[#0B1B33]">All</span>
           </button>
           {CATEGORIES.map((cat) => (
-            <Link key={cat.name} to={cat.link} className="flex w-[68px] flex-shrink-0 flex-col items-center gap-1.5 active:scale-95">
-              <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-white text-[#FF6C00] shadow-sm ring-1 ring-gray-200">
+            <Link key={cat.name} to={cat.link} className="flex w-[64px] flex-shrink-0 snap-start flex-col items-center gap-1.5 active:scale-95">
+              <span className="flex h-[52px] w-[52px] items-center justify-center rounded-2xl bg-white text-[#FF6C00] shadow-sm ring-1 ring-gray-200">
                 <cat.icon className="h-6 w-6" strokeWidth={1.8} />
               </span>
               <span className="line-clamp-2 w-full text-center text-[11px] font-semibold leading-tight text-[#1F2937]">{cat.name}</span>
@@ -854,7 +853,7 @@ const Home = () => {
 
           {/* ---- Middle: carousel ---- */}
           <section
-            className="relative min-h-[480px] overflow-hidden rounded-2xl bg-[#0B1B33] shadow-[0_4px_20px_-8px_rgba(11,27,51,0.25)] sm:min-h-[500px] lg:col-span-6 lg:min-h-0"
+            className="relative min-h-[430px] overflow-hidden rounded-2xl shadow-[0_4px_20px_-8px_rgba(11,27,51,0.25)] sm:min-h-[500px] lg:col-span-6 lg:min-h-0"
             aria-roledescription="carousel"
             aria-label="Featured deals"
             style={{ touchAction: 'pan-y' }}
@@ -869,7 +868,7 @@ const Home = () => {
                 <div className="absolute -bottom-24 right-[8%] h-64 w-64 rounded-full bg-[#FF6C00]/40 blur-3xl" />
 
                 {/* Product */}
-                <div className="absolute inset-x-4 top-3 flex h-[44%] items-center justify-center sm:inset-x-auto sm:bottom-12 sm:right-[76px] sm:top-4 sm:h-auto sm:w-[52%]">
+                <div className="absolute inset-x-4 top-3 flex h-[38%] items-center justify-center sm:inset-x-auto sm:bottom-12 sm:right-[76px] sm:top-4 sm:h-auto sm:w-[52%]">
                   <div className="absolute aspect-square h-[98%] rounded-full bg-gradient-to-br from-white/25 to-white/5 ring-1 ring-white/25" />
                   <img src={s.image} alt={s.title} className={`relative max-h-full max-w-full object-contain drop-shadow-[0_32px_36px_rgba(0,0,0,0.55)] transition-transform duration-[7000ms] ease-out ${idx === heroSlide ? 'scale-110' : 'scale-100'}`} />
                   {s.pct > 0 && (
@@ -881,17 +880,17 @@ const Home = () => {
                 </div>
 
                 {/* Text */}
-                <div className="relative z-10 flex h-full flex-col justify-end px-5 pb-14 sm:justify-center sm:px-8 sm:pb-10">
-                  <div className="max-w-[320px] sm:max-w-[240px] lg:max-w-[250px]">
+                <div className="relative z-10 flex h-full flex-col justify-end px-5 pb-12 sm:justify-center sm:px-8 sm:pb-10">
+                  <div className="max-w-[290px] sm:max-w-[240px] lg:max-w-[250px]">
                     <span className="inline-flex items-center gap-1.5 rounded-full bg-[#FF6C00] px-3 py-1 text-[11.5px] font-bold text-white shadow-md shadow-orange-500/30">
                       <Sparkles className="h-3 w-3" />
                       {s.tag}
                     </span>
-                    <h2 className="mt-3 line-clamp-3 text-[22px] font-extrabold leading-[1.15] tracking-tight text-white lg:text-[26px]">{s.title}</h2>
-                    <p className="mt-1.5 line-clamp-2 text-[13px] font-medium leading-snug text-white/70">{s.highlight}</p>
+                    <h2 className="mt-2.5 line-clamp-3 text-[20px] font-extrabold leading-[1.15] tracking-tight text-white sm:mt-3 sm:text-[22px] lg:text-[26px]">{s.title}</h2>
+                    <p className="mt-1.5 line-clamp-2 text-[12.5px] font-medium leading-snug text-white/70 sm:text-[13px]">{s.highlight}</p>
 
                     <div className="mt-3 flex items-end gap-2.5">
-                      <span className="text-[28px] font-extrabold leading-none text-white">{s.price}</span>
+                      <span className="text-[25px] font-extrabold leading-none text-white sm:text-[28px]">{s.price}</span>
                       {s.oldPrice && <span className="pb-0.5 text-[13px] text-white/45 line-through">{s.oldPrice}</span>}
                     </div>
 
@@ -958,7 +957,7 @@ const Home = () => {
           </section>
 
           {/* ---- Right: banners (swipe row on phones) ---- */}
-          <div className="no-scrollbar -mx-4 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 sm:mx-0 sm:grid sm:grid-cols-2 sm:overflow-visible sm:px-0 lg:col-span-3 lg:grid-cols-1 lg:grid-rows-2">
+          <div className="no-scrollbar -mx-4 flex snap-x snap-mandatory gap-3 overflow-x-auto scroll-px-4 px-4 sm:mx-0 sm:grid sm:grid-cols-2 sm:overflow-visible sm:px-0 lg:col-span-3 lg:grid-cols-1 lg:grid-rows-2">
             {heroBanners.map((b) => (
               <Link key={b.title} to={b.link} className="group relative flex min-h-[180px] w-[84%] flex-shrink-0 snap-start overflow-hidden rounded-2xl bg-[#0B1B33] shadow-[0_4px_20px_-8px_rgba(11,27,51,0.25)] sm:w-auto lg:min-h-0">
                 <img src={b.image} alt="" aria-hidden="true" className="absolute inset-0 h-full w-full scale-125 object-cover blur-xl brightness-90 saturate-125" />

@@ -4,6 +4,7 @@ import { Toaster } from 'react-hot-toast';
 import Header from './components/Header';
 import Footer from './components/Footer';
 import PreFooter from './components/PreFooter';
+import AiGuide from './components/AiGuide';
 import Home from './pages/Home';
 import Shop from './pages/Shop';
 import ProductDetail from './pages/ProductDetail';
@@ -68,6 +69,7 @@ function AppContent() {
       </main>
       {!hideHeaderFooter && <PreFooter />}
       {!hideHeaderFooter && <Footer />}
+      {!isAdminPage && <AiGuide />}
       <Toaster position="top-right" />
     </div>
   );
