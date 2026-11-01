@@ -133,7 +133,7 @@ const AdminDashboard = () => {
     load();
   }, [load]);
 
-  const monthlySales = data?.monthlySales || [];
+  const monthlySales = useMemo(() => data?.monthlySales || [], [data]);
 
   const salesSummary = useMemo(() => {
     if (monthlySales.length === 0) return null;
