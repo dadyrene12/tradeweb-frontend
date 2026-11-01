@@ -853,7 +853,7 @@ const Home = () => {
 
           {/* ---- Middle: carousel ---- */}
           <section
-            className="relative min-h-[430px] overflow-hidden rounded-2xl shadow-[0_4px_20px_-8px_rgba(11,27,51,0.25)] sm:min-h-[500px] lg:col-span-6 lg:min-h-0"
+            className="relative min-h-[500px] overflow-hidden rounded-2xl bg-[#0B1B33] shadow-[0_4px_20px_-8px_rgba(11,27,51,0.25)] sm:min-h-[540px] lg:col-span-6 lg:min-h-0"
             aria-roledescription="carousel"
             aria-label="Featured deals"
             style={{ touchAction: 'pan-y' }}
@@ -862,15 +862,15 @@ const Home = () => {
           >
             {heroSlides.map((s, idx) => (
               <div key={idx} aria-hidden={idx !== heroSlide} className={`absolute inset-0 transition-opacity duration-1000 ${idx === heroSlide ? 'z-10 opacity-100' : 'pointer-events-none z-0 opacity-0'}`}>
-                <img src={s.image} alt="" aria-hidden="true" className="absolute gitinset-0 h-full w-full scale-150 object-cover blur-3xl brightness-95 saturate-150" />
-                <div className="absolute inset-0  bg-orange-500" />
+                <img src={s.image} alt="" aria-hidden="true" className="absolute inset-0 h-full w-full scale-150 object-cover blur-3xl brightness-95 saturate-150" />
+                <div className="absolute inset-0 bg-gradient-to-b from-[#0B1B33]/70 via-[#0B1B33]/85 to-[#0B1B33] sm:bg-gradient-to-r sm:from-[#0B1B33] sm:via-[#0B1B33]/75 sm:to-[#0B1B33]/20" />
                 <div className="absolute inset-0 opacity-40" style={{ backgroundImage: 'radial-gradient(rgba(255,255,255,0.12) 1px, transparent 1px)', backgroundSize: '20px 20px' }} />
                 <div className="absolute -bottom-24 right-[8%] h-64 w-64 rounded-full bg-[#FF6C00]/40 blur-3xl" />
 
                 {/* Product */}
-                <div className="absolute inset-x-4 top-3 flex h-[38%] items-center justify-center sm:inset-x-auto sm:bottom-12 sm:right-[76px] sm:top-4 sm:h-auto sm:w-[52%]">
-                  <div className="absolute aspect-square h-[98%] rounded-full bg-gradient-to-br from-white/25 to-white/5 ring-1 ring-white/25" />
-                  <img src={s.image} alt={s.title} className={`relative max-h-full max-w-full object-contain drop-shadow-[0_32px_36px_rgba(0,0,0,0.55)] transition-transform duration-[7000ms] ease-out ${idx === heroSlide ? 'scale-110' : 'scale-100'}`} />
+                <div className="absolute inset-x-2 top-1 flex h-[53%] items-center justify-center sm:inset-x-auto sm:bottom-12 sm:right-[76px] sm:top-4 sm:h-auto sm:w-[52%]">
+                  <div className="absolute aspect-square h-[98%] max-h-[98%] max-w-[98%] rounded-full bg-gradient-to-br from-white/25 to-white/5 ring-1 ring-white/25" />
+                  <img src={s.image} alt={s.title} className={`relative h-full max-h-full w-auto max-w-full object-contain drop-shadow-[0_32px_36px_rgba(0,0,0,0.55)] transition-transform duration-[7000ms] ease-out sm:h-auto ${idx === heroSlide ? 'scale-105 sm:scale-110' : 'scale-100'}`} />
                   {s.pct > 0 && (
                     <div className="absolute -right-1 top-0 flex h-[64px] w-[64px] flex-col items-center justify-center rounded-full bg-[#FF6C00] text-white shadow-xl shadow-orange-500/40 ring-4 ring-white/20 sm:h-[70px] sm:w-[70px]">
                       <span className="text-[10px] font-semibold leading-none">Save</span>
