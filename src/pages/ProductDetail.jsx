@@ -9,7 +9,10 @@ import { useCart } from '../context/CartContext';
 import api from '../lib/api';
 import { formatMoney } from '../lib/currency';
 import { toStoreProduct } from '../lib/productMapper';
+import { sendQuickOrder } from '../lib/orders';
 import fallbackProducts, { getProductById } from '../data/products';
+
+const STORE_WHATSAPP_NUMBER = '250722189516';
 
 /* ---------- small helpers ---------- */
 
@@ -148,14 +151,36 @@ const ProductDetail = () => {
     setToast(`${qty} × ${product.name} added to your cart`);
   };
 
-  const handleBuyOnWhatsapp = () => {
+  const handleBuyOnWhatsapp = async () => {
     if (!validate()) return;
     const options = [color && `Color: ${color}`, size && `Size: ${size}`].filter(Boolean).join(', ');
     const message =
       `Hi! I'd like to order:\n${product.name}\nQuantity: ${qty}\n` +
       (options ? `${options}\n` : '') +
       `Total: ${formatMoney(product.price * qty)}\n${productUrl}`;
-    window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, '_blank');
+    window.open(`https://wa.me/${STORE_WHATSAPP_NUMBER}?text=${encodeURIComponent(message)}`, '_blank');
+
+    try {
+      await sendQuickOrder({
+        channel: 'whatsapp',
+        items: [
+          {
+            product: product.id,
+            name: product.name,
+            price: product.price,
+            quantity: qty,
+            image: product.image || product.images?.[0],
+          },
+        ],
+        note: [`WhatsApp order request for ${product.name}`, options, `Product link: ${productUrl}`]
+          .filter(Boolean)
+          .join(' · '),
+        customer: { name: 'WhatsApp customer' },
+      });
+      setToast('Order received — we will reply shortly.');
+    } catch (error) {
+      setToast('Could not save the order. Please send the WhatsApp message.');
+    }
   };
 
   const toggleWishlist = () => {

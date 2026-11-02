@@ -5,6 +5,7 @@ import {
   FiArrowLeft,
   FiCheck,
   FiCopy,
+  FiLoader,
   FiLock,
   FiMail,
   FiMinus,
@@ -17,15 +18,17 @@ import {
   FiX,
 } from 'react-icons/fi';
 import { FaWhatsapp } from 'react-icons/fa';
+import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
 import { formatMoney } from '../lib/currency'; // single import: do NOT declare formatMoney again below
+import { sendQuickOrder } from '../lib/orders';
 
 /* -------------------------------------------------------------------------- */
 /*  Store settings – edit these to match your business                         */
 /* -------------------------------------------------------------------------- */
 const STORE = {
-  whatsappNumber: '15551234567', // international format, digits only (no + or spaces)
-  email: 'orders@yourstore.com',
+  whatsappNumber: '250722189516', // international format, digits only (no + or spaces)
+  email: 'rnsmartelectronics@gmail.com',
   freeShippingThreshold: 100000, // order value that unlocks free shipping
   shippingFee: 0, // set to 0 to make shipping always free
   maxQuantity: 99,
@@ -135,6 +138,7 @@ const EmptyCart = () => (
 /* -------------------------------------------------------------------------- */
 const Cart = () => {
   const { cartItems, removeFromCart, updateQuantity, getCartTotal, clearCart } = useCart();
+  const { user } = useAuth();
 
   const prefs = useMemo(loadPrefs, []);
   const [channel, setChannel] = useState(prefs.channel === 'email' ? 'email' : 'whatsapp');
@@ -151,6 +155,8 @@ const Cart = () => {
   const [toast, setToast] = useState(null);
   const [confirmClear, setConfirmClear] = useState(false);
   const [orderRef] = useState(makeOrderRef);
+  const [saving, setSaving] = useState(false);
+  const [placedOrder, setPlacedOrder] = useState(null);
   const toastTimer = useRef(null);
 
   /* ---- toast ---- */
@@ -258,8 +264,8 @@ const Cart = () => {
     return lines.join('\n');
   };
 
-  const handleSend = () => {
-    if (cartItems.length === 0) return;
+  const handleSend = async () => {
+    if (cartItems.length === 0 || saving) return;
 
     if (Object.keys(errors).length > 0) {
       setTouched({ name: true, phone: true, address: true });
@@ -271,19 +277,45 @@ const Cart = () => {
     }
 
     const text = buildOrderText(channel);
+    const whatsappUrl = `https://wa.me/${STORE.whatsappNumber}?text=${encodeURIComponent(text)}`;
+    const subject = `New order ${orderRef} - ${customer.name.trim()}`;
+    const body = text.replace(/\n/g, '\r\n');
+    const mailtoUrl = `mailto:${STORE.email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
 
     if (channel === 'whatsapp') {
-      window.open(
-        `https://wa.me/${STORE.whatsappNumber}?text=${encodeURIComponent(text)}`,
-        '_blank',
-        'noopener,noreferrer'
-      );
-      showToast('Opening WhatsApp with your order…');
-    } else {
-      const subject = `New order ${orderRef} - ${customer.name.trim()}`;
-      const body = text.replace(/\n/g, '\r\n');
-      window.location.href = `mailto:${STORE.email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-      showToast('Opening your email app…');
+      window.open(whatsappUrl, '_blank', 'noopener,noreferrer');
+    }
+
+    setSaving(true);
+
+    try {
+      const saved = await sendQuickOrder({
+        channel,
+        items: cartItems.map((item) => ({
+          product: item.id,
+          name: item.name,
+          price: item.price,
+          quantity: item.quantity,
+          image: item.image,
+        })),
+        customer: { ...customer, email: user?.email || '' },
+        orderRef,
+        note,
+        couponCode: appliedCoupon || '',
+        discount,
+        shippingFee: shipping,
+      });
+
+      setPlacedOrder({ ref: saved?.orderRef || orderRef, channel });
+      showToast('Order received — we will reply shortly.');
+    } catch (error) {
+      showToast('We could not save your order, but you can still send it.', 'error');
+    } finally {
+      setSaving(false);
+    }
+
+    if (channel === 'email') {
+      window.location.href = mailtoUrl;
     }
   };
 
@@ -636,12 +668,23 @@ const Cart = () => {
                 <button
                   type="button"
                   onClick={handleSend}
-                  className={`mt-5 flex w-full items-center justify-center gap-2 rounded-xl py-3.5 font-semibold text-white shadow-sm transition hover:shadow-md ${
+                  disabled={saving}
+                  className={`mt-5 flex w-full items-center justify-center gap-2 rounded-xl py-3.5 font-semibold text-white shadow-sm transition hover:shadow-md disabled:cursor-not-allowed disabled:opacity-70 ${
                     channel === 'whatsapp' ? 'bg-green-600 hover:bg-green-700' : 'bg-[#1e73be] hover:bg-[#1a5f9e]'
                   }`}
                 >
-                  {channel === 'whatsapp' ? <FaWhatsapp className="h-5 w-5" /> : <FiMail className="h-5 w-5" />}
-                  {channel === 'whatsapp' ? 'Send order on WhatsApp' : 'Send order by email'}
+                  {saving ? (
+                    <FiLoader className="h-5 w-5 animate-spin" />
+                  ) : channel === 'whatsapp' ? (
+                    <FaWhatsapp className="h-5 w-5" />
+                  ) : (
+                    <FiMail className="h-5 w-5" />
+                  )}
+                  {saving
+                    ? 'Saving your order…'
+                    : channel === 'whatsapp'
+                      ? 'Send order on WhatsApp'
+                      : 'Send order by email'}
                 </button>
 
                 <button
@@ -656,8 +699,9 @@ const Cart = () => {
                 <p className="mt-4 flex items-start gap-2 text-xs leading-relaxed text-gray-500">
                   <FiLock className="mt-0.5 h-3.5 w-3.5 flex-shrink-0" />
                   <span>
-                    Your order opens pre-filled in {channel === 'whatsapp' ? 'WhatsApp' : 'your email app'}. Nothing is
-                    charged online; we confirm availability and payment with you directly.
+                    Your order is saved here and opens pre-filled in{' '}
+                    {channel === 'whatsapp' ? 'WhatsApp' : 'your email app'}. Nothing is charged online; we confirm
+                    availability and payment with you directly.
                   </span>
                 </p>
               </div>
@@ -707,8 +751,46 @@ const Cart = () => {
         </div>
       )}
 
+      {/* Order received confirmation */}
+      {placedOrder && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-gray-900 bg-opacity-50 px-4"
+          onClick={() => setPlacedOrder(null)}
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="placed-title"
+            aria-describedby="placed-desc"
+            className="w-full max-w-md rounded-2xl bg-white p-6 text-center shadow-xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-green-100 text-green-600">
+              <FiCheck className="h-7 w-7" />
+            </div>
+            <h3 id="placed-title" className="text-xl font-bold text-gray-900">Order received!</h3>
+            <p id="placed-desc" className="mt-2 text-sm leading-relaxed text-gray-600">
+              Your order <span className="font-semibold text-gray-900">#{placedOrder.ref}</span> has been saved. Our
+              team will contact you shortly to confirm availability, payment and delivery.
+            </p>
+            <p className="mt-3 text-sm text-gray-500">
+              {placedOrder.channel === 'whatsapp'
+                ? 'WhatsApp is opening with your order details so you can send it right away.'
+                : 'Your email app is opening with your order details so you can send it right away.'}
+            </p>
+            <button
+              type="button"
+              onClick={() => setPlacedOrder(null)}
+              className="mt-6 w-full rounded-lg bg-[#1e73be] py-2.5 text-sm font-semibold text-white transition hover:bg-[#1a5f9e]"
+            >
+              Got it
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Toast */}
-      <div aria-live="polite" className="pointer-events-none fixed inset-x-0 bottom-6 z-50 flex justify-center px-4">
+      <div aria-live="polite" className="pointer-events-none fixed inset-x-0 bottom-6 z-50 flex items-center justify-center px-4">
         {toast && (
           <div
             className={`pointer-events-auto flex items-center gap-2 rounded-full px-4 py-2.5 text-sm font-medium text-white shadow-lg ${

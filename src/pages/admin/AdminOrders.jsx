@@ -174,7 +174,7 @@ const AdminOrders = () => {
                     </td>
                     <td className="px-4 py-3">
                       <p className="font-semibold text-[#0B1B33]">{order.user?.name || order.shippingAddress?.fullName}</p>
-                      <p className="text-[11.5px] text-gray-500">{order.user?.email}</p>
+                      <p className="text-[11.5px] text-gray-500">{order.contactEmail || order.user?.email || order.shippingAddress?.phone}</p>
                     </td>
                     <td className="px-4 py-3 text-gray-600">{order.items?.length || 0}</td>
                     <td className="px-4 py-3 font-bold text-[#0B1B33]">{money(order.totalAmount)}</td>
@@ -251,8 +251,15 @@ const AdminOrders = () => {
                       <FiTruck className="h-3.5 w-3.5" /> Delivery & payment
                     </div>
                     <p className="text-[13px] text-gray-600">Payment: <b className="text-[#0B1B33]">{selected.paymentMethod}</b></p>
-                    <p className="text-[13px] text-gray-600">Customer: <b className="text-[#0B1B33]">{selected.user?.name || 'Guest'}</b></p>
-                    <p className="text-[13px] text-gray-600">Email: <b className="text-[#0B1B33]">{selected.user?.email || '-'}</b></p>
+                    <p className="text-[13px] text-gray-600">Customer: <b className="text-[#0B1B33]">{selected.user?.name || selected.shippingAddress?.fullName || 'Guest'}</b></p>
+                    <p className="text-[13px] text-gray-600">Email: <b className="text-[#0B1B33]">{selected.contactEmail || selected.user?.email || '-'}</b></p>
+                    <p className="text-[13px] text-gray-600">Source: <b className="text-[#0B1B33] capitalize">{selected.source || 'web'}</b></p>
+                    {selected.orderRef && (
+                      <p className="text-[13px] text-gray-600">Order ref: <b className="text-[#0B1B33]">{selected.orderRef}</b></p>
+                    )}
+                    {selected.note && (
+                      <p className="mt-2 rounded-lg bg-gray-50 px-3 py-2 text-[12.5px] text-gray-600">{selected.note}</p>
+                    )}
                   </div>
                 </div>
 

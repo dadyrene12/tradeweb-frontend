@@ -11,13 +11,14 @@ import { useCart } from '../context/CartContext';
 import api from '../lib/api';
 import { formatMoney } from '../lib/currency';
 import { toStoreProduct } from '../lib/productMapper';
+import { sendQuickOrder } from '../lib/orders';
 import fallbackProducts, { getDiscountedProducts } from '../data/products';
 
 /* -------------------------------------------------------------------------- */
 /*  Settings                                                                   */
 /* -------------------------------------------------------------------------- */
 // Optional: your store's WhatsApp number (digits only, with country code, e.g. 250788000000).
-const WHATSAPP_NUMBER = '';
+const WHATSAPP_NUMBER = '250722189516';
 const waLink = (text) => `https://wa.me/${WHATSAPP_NUMBER}${text ? `?text=${encodeURIComponent(text)}` : ''}`;
 
 const CART_ROUTE = '/cart';
@@ -653,10 +654,30 @@ const Home = () => {
     showToast(`${product.name} added to cart`);
   };
 
-  const handleBuyOnWhatsapp = (product) => {
+  const handleBuyOnWhatsapp = async (product) => {
     const productUrl = `${window.location.origin}/product/${product.id}`;
     const message = `Hi! I'm interested in: ${product.name} - Price: ${formatMoney(product.price)}. Please provide more details. ${productUrl}`;
     window.open(waLink(message), '_blank', 'noopener,noreferrer');
+
+    try {
+      await sendQuickOrder({
+        channel: 'whatsapp',
+        items: [
+          {
+            product: product.id,
+            name: product.name,
+            price: product.price,
+            quantity: 1,
+            image: product.image,
+          },
+        ],
+        note: `WhatsApp order request for ${product.name}`,
+        customer: { name: 'WhatsApp customer' },
+      });
+      showToast('Order received — we will reply shortly.');
+    } catch (error) {
+      showToast('Could not save the order. Please send the WhatsApp message.');
+    }
   };
 
   const handleShareProduct = (product) => {
