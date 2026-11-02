@@ -220,8 +220,8 @@ const PreFooter = () => {
             </p>
             <div className="mt-3 flex items-center gap-2">
               {[
-                { icon: FaFacebook, href: 'https://facebook.com', label: 'Facebook' },
-                { icon: FaInstagram, href: 'https://instagram.com', label: 'Instagram' },
+                { icon: FaFacebook, href: 'https://www.facebook.com/nduwumukiza.romainrens', label: 'Facebook' },
+                { icon: FaInstagram, href: 'https://www.instagram.com/nduwumukizaromain_97', label: 'Instagram' },
                 { icon: FaTwitter, href: 'https://twitter.com', label: 'Twitter' },
                 { icon: FaYoutube, href: 'https://youtube.com', label: 'YouTube' },
               ].map((social) => {

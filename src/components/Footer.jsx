@@ -14,10 +14,10 @@ const WHATSAPP_NUMBER = '250722189516';
 const EMAIL = 'rnsmartelectronics@gmail.com';
 const MAP_URL = 'https://www.google.com/maps/search/?api=1&query=Nyarugenge+Kigali+Rwanda';
 
-// Replace with your real social pages.
+// Real social pages for RN Smart Electronics.
 const SOCIALS = [
-  { label: 'Facebook', icon: FiFacebook, href: 'https://facebook.com' },
-  { label: 'Instagram', icon: FiInstagram, href: 'https://instagram.com' },
+  { label: 'Facebook', icon: FiFacebook, href: 'https://www.facebook.com/nduwumukiza.romainrens' },
+  { label: 'Instagram', icon: FiInstagram, href: 'https://www.instagram.com/nduwumukizaromain_97' },
   { label: 'Twitter', icon: FiTwitter, href: 'https://twitter.com' },
   { label: 'YouTube', icon: FiYoutube, href: 'https://youtube.com' },
 ];

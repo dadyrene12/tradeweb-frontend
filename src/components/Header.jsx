@@ -29,9 +29,9 @@ const categories = [
 const navLinks = [
   { label: 'Home', to: '/', end: true },
   { label: 'Shop', to: '/shop', end: true },
-  { label: 'Smart TVs', to: '/shop?category=audio' },
-  { label: 'Home Appliances', to: '/shop?category=appliances' },
-  { label: 'Audio', to: '/shop?category=audio' },
+  { label: 'Smart TVs', to: '/shop?category=audio', secondary: true },
+  { label: 'Home Appliances', to: '/shop?category=appliances', secondary: true },
+  { label: 'Audio', to: '/shop?category=audio', secondary: true },
   { label: 'Blog', to: '/blog' },
   { label: 'Contact', to: '/contact' },
 ];
@@ -129,7 +129,7 @@ const Header = () => {
   );
 
   const linkClass = ({ isActive }) =>
-    `relative block px-4 py-4 text-[14px] font-semibold transition-colors after:absolute after:inset-x-4 after:bottom-0 after:h-[3px] after:rounded-t-full after:transition-all ${
+    `relative block px-3 py-4 text-[14px] font-semibold transition-colors after:absolute after:inset-x-3 after:bottom-0 after:h-[3px] after:rounded-t-full after:transition-all xl:px-4 xl:after:inset-x-4 ${
       isActive
         ? 'text-[#FF6C00] after:bg-[#FF6C00]'
         : 'text-[#0B1B33] after:bg-transparent hover:text-[#FF6C00] hover:after:bg-[#FF6C00]/40'
@@ -144,7 +144,7 @@ const Header = () => {
 
       {/* ============ Top utility bar ============ */}
       <div className="hidden bg-[#0B1B33] text-white lg:block">
-        <div className="mx-auto flex h-9 max-w-[1400px] items-center justify-between px-4 text-[12px]">
+        <div className="mx-auto flex h-9 max-w-[1400px] items-center justify-between px-4 text-[12px] sm:px-6 lg:px-8">
           <div className="flex items-center gap-5 text-white/80">
             <span className="flex items-center gap-2">
               <FiTruck className="h-4 w-4 text-[#FF6C00]" />
@@ -169,8 +169,8 @@ const Header = () => {
 
       {/* ============ Main row ============ */}
       <div className="border-b border-[#E5E7EB]">
-        <div className="mx-auto max-w-[1400px] px-4">
-          <div className="flex items-center gap-3 py-3 lg:gap-8 lg:py-4">
+        <div className="mx-auto max-w-[1400px] px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center gap-3 py-3 sm:gap-4 lg:gap-6 lg:py-4">
 
             {/* Mobile menu toggle */}
             <button
@@ -253,12 +253,12 @@ const Header = () => {
 
       {/* ============ Navigation bar (desktop) ============ */}
       <nav className="hidden border-b border-[#E5E7EB] bg-white lg:block" aria-label="Main">
-        <div className="mx-auto flex max-w-[1400px] items-stretch justify-between px-4">
+        <div className="mx-auto flex max-w-[1400px] items-stretch justify-between px-4 sm:px-6 lg:px-8">
 
           <div className="flex items-stretch">
             {/* Categories dropdown */}
             <div
-              className="relative mr-4 flex"
+              className="relative mr-3 flex xl:mr-4"
               onMouseEnter={() => setCatMenuOpen(true)}
               onMouseLeave={() => setCatMenuOpen(false)}
             >
@@ -267,7 +267,7 @@ const Header = () => {
                 aria-expanded={catMenuOpen}
                 aria-haspopup="true"
                 onClick={() => setCatMenuOpen((o) => !o)}
-                className="my-2 flex w-[260px] items-center gap-3 rounded-xl bg-[#FF6C00] px-4 text-[14px] font-bold text-white transition-colors hover:bg-[#E65C00]"
+                className="my-2 flex w-[250px] items-center gap-3 rounded-xl bg-[#FF6C00] px-4 text-[14px] font-bold text-white transition-colors hover:bg-[#E65C00]"
               >
                 <FiGrid className="h-5 w-5" />
                 <span className="flex-1 text-left">All categories</span>
@@ -275,7 +275,7 @@ const Header = () => {
               </button>
 
               {catMenuOpen && (
-                <div className="absolute left-0 top-full z-50 w-[260px] pt-0">
+                <div className="absolute left-0 top-full z-50 w-[250px] pt-0">
                   <ul className="overflow-hidden rounded-b-2xl border border-t-0 border-[#E5E7EB] bg-white p-2 shadow-[0_20px_40px_-12px_rgba(11,27,51,0.25)]">
                     {categories.map((cat) => (
                       <li key={cat.name}>
@@ -299,7 +299,7 @@ const Header = () => {
             {/* Links */}
             <ul className="flex items-stretch">
               {navLinks.map((l) => (
-                <li key={l.label}>
+                <li key={l.label} className={l.secondary ? 'hidden xl:block' : ''}>
                   <NavLink to={l.to} end={l.end} className={linkClass}>{l.label}</NavLink>
                 </li>
               ))}
@@ -307,7 +307,7 @@ const Header = () => {
           </div>
 
           {/* Right */}
-          <div className="flex items-center gap-4 text-[13px] font-semibold">
+          <div className="flex items-center gap-3 text-[13px] font-semibold xl:gap-4">
             {user ? (
               <>
                 {user.role === 'admin' && (
