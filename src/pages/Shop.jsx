@@ -1,8 +1,10 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
+import Seo from '../components/Seo';
 import api from '../lib/api';
 import { CURRENCY, formatMoney } from '../lib/currency';
 import { toStoreProduct } from '../lib/productMapper';
+import { absoluteUrl } from '../lib/seo';
 import {
   FiGrid, FiList, FiChevronRight, FiChevronLeft, FiSearch, FiX, FiStar,
   FiShoppingCart, FiSliders, FiCheck,
@@ -225,6 +227,26 @@ const Shop = () => {
   const currentPage = Math.min(page, totalPages);
   const start = (currentPage - 1) * pageSize;
   const visible = filtered.slice(start, start + pageSize);
+  const categoryLabel = category ? labelFor(category) : '';
+  const seoTitle = category
+    ? `${categoryLabel} in Rwanda | RN Smart Electronics`
+    : urlSearch
+      ? `Search results for "${urlSearch}" | RN Smart Electronics`
+      : 'Shop Electronics & Home Appliances in Rwanda | RN Smart Electronics';
+  const seoDescription = category
+    ? `Shop ${categoryLabel.toLowerCase()} at RN Smart Electronics in Kigali, Rwanda. Genuine products, competitive prices, fast delivery and easy WhatsApp ordering.`
+    : 'Browse smart TVs, fridges, washing machines, cookers, speakers and home appliances at RN Smart Electronics in Kigali, Rwanda. Fast delivery and secure ordering.';
+  const canonicalPath = category ? `/shop?category=${encodeURIComponent(category)}` : '/shop';
+  const shopStructuredData = {
+    '@type': 'ItemList',
+    name: seoTitle,
+    itemListElement: visible.slice(0, 12).map((product, index) => ({
+      '@type': 'ListItem',
+      position: start + index + 1,
+      name: product.name,
+      url: absoluteUrl(`/product/${product.id}`),
+    })),
+  };
 
   useEffect(() => setPage(1), [category, urlSearch, price, brandsSel, minRating, onlyDeals, sort, pageSize]);
 
@@ -416,6 +438,13 @@ const Shop = () => {
 
   return (
     <div className="min-h-screen overflow-x-hidden bg-[#F3F4F6]" style={{ fontFamily: "'Plus Jakarta Sans', 'Inter', system-ui, sans-serif" }}>
+      <Seo
+        title={seoTitle}
+        description={seoDescription}
+        path={canonicalPath}
+        noindex={Boolean(urlSearch)}
+        structuredData={[shopStructuredData]}
+      />
       <style>{`@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');`}</style>
 
       {/* ---------- Page banner ---------- */}

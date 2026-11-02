@@ -1,0 +1,20 @@
+User-agent: *
+Allow: /
+
+# Private and transactional pages
+Disallow: /admin
+Disallow: /account
+Disallow: /cart
+Disallow: /login
+Disallow: /register
+Disallow: /verify-email
+Disallow: /forgot-password
+Disallow: /reset-password
+Disallow: /wishlist
+Disallow: /compare
+
+# Internal search result pages
+Disallow: /*search=
+Disallow: /*?search=
+
+Sitemap: https://rn-smartelectronic-campany-ltdrw.vercel.app/sitemap.xml

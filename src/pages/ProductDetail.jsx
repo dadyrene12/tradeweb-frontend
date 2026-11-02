@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useParams, Link } from 'react-router-dom';
+import Seo from '../components/Seo';
 import {
   FiShoppingCart, FiHeart, FiShare2, FiX, FiMinus, FiPlus, FiCheck,
   FiTruck, FiShield, FiRefreshCw, FiCopy, FiMail, FiChevronLeft, FiChevronRight,
@@ -10,6 +11,7 @@ import api from '../lib/api';
 import { formatMoney } from '../lib/currency';
 import { toStoreProduct } from '../lib/productMapper';
 import { sendQuickOrder } from '../lib/orders';
+import { SITE_NAME, absoluteImage, absoluteUrl, breadcrumbSchema, truncate } from '../lib/seo';
 import fallbackProducts, { getProductById } from '../data/products';
 
 const STORE_WHATSAPP_NUMBER = '250722189516';
@@ -239,8 +241,66 @@ const ProductDetail = () => {
     { key: 'shipping', label: 'Shipping & returns' },
   ];
 
+  const canonicalPath = `/product/${id}`;
+  const seoTitle = `${product.name} | ${SITE_NAME}`;
+  const seoDescription = truncate(
+    product.description ||
+      `Buy ${product.name} at ${SITE_NAME} in Kigali, Rwanda. Genuine product, fast delivery and easy WhatsApp ordering.`,
+    160
+  );
+  const schemaImages = [...new Set([...(product.images || []), product.image].filter(Boolean).map(absoluteImage))];
+  if (!schemaImages.length) schemaImages.push(absoluteImage());
+  const productCategory = String(product.category || 'Electronics')
+    .replace(/[-_]/g, ' ')
+    .replace(/\b\w/g, (character) => character.toUpperCase());
+
+  const productStructuredData = [
+    {
+      '@type': 'Product',
+      name: product.name,
+      description: seoDescription,
+      image: schemaImages,
+      sku: String(product.id || id),
+      mpn: String(product.id || id),
+      brand: {
+        '@type': 'Brand',
+        name: product.brand || SITE_NAME,
+      },
+      category: productCategory,
+      url: absoluteUrl(canonicalPath),
+      offers: {
+        '@type': 'Offer',
+        url: absoluteUrl(canonicalPath),
+        priceCurrency: 'RWF',
+        price: Number(product.price) || 0,
+        availability: outOfStock ? 'https://schema.org/OutOfStock' : 'https://schema.org/InStock',
+        itemCondition: 'https://schema.org/NewCondition',
+        seller: {
+          '@type': 'Organization',
+          name: SITE_NAME,
+        },
+      },
+    },
+    breadcrumbSchema([
+      { name: 'Home', path: '/' },
+      { name: 'Shop', path: '/shop' },
+      ...(product.category
+        ? [{ name: productCategory, path: `/shop?category=${encodeURIComponent(product.category)}` }]
+        : []),
+      { name: product.name, path: canonicalPath },
+    ]),
+  ];
+
   return (
     <div className="bg-gray-50 min-h-screen pb-24 md:pb-12">
+      <Seo
+        title={seoTitle}
+        description={seoDescription}
+        path={canonicalPath}
+        image={product.image || schemaImages[0]}
+        type="product"
+        structuredData={productStructuredData}
+      />
       <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8 py-6">
         {/* Breadcrumb */}
         <nav aria-label="Breadcrumb" className="text-sm text-gray-500 flex items-center gap-2 mb-6 flex-wrap">

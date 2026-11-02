@@ -220,8 +220,8 @@ const PreFooter = () => {
             </p>
             <div className="mt-3 flex items-center gap-2">
               {[
-                { icon: FaFacebook, href: 'https://www.facebook.com/nduwumukiza.romainrens', label: 'Facebook' },
-                { icon: FaInstagram, href: 'https://www.instagram.com/nduwumukizaromain_97', label: 'Instagram' },
+                { icon: FaFacebook, href: 'https://www.facebook.com/nduwumukiza.romainrens', label: 'Facebook', handle: 'nduwumukiza.romainrens' },
+                { icon: FaInstagram, href: 'https://www.instagram.com/nduwumukizaromain_97', label: 'Instagram', handle: 'nduwumukizaromain_97' },
                 { icon: FaTwitter, href: 'https://twitter.com', label: 'Twitter' },
                 { icon: FaYoutube, href: 'https://youtube.com', label: 'YouTube' },
               ].map((social) => {
@@ -232,7 +232,8 @@ const PreFooter = () => {
                     href={social.href}
                     target="_blank"
                     rel="noreferrer"
-                    aria-label={social.label}
+                    aria-label={social.handle ? `${social.label}: ${social.handle}` : social.label}
+                    title={social.handle ? `@${social.handle}` : social.label}
                     className="flex h-9 w-9 items-center justify-center rounded-lg bg-white text-[#FF6C00] ring-1 ring-orange-100 transition-colors hover:bg-[#FF6C00] hover:text-white"
                   >
                     <Icon className="h-4 w-4" />
@@ -240,6 +241,14 @@ const PreFooter = () => {
                 );
               })}
             </div>
+            <p className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-[11px] font-medium text-gray-400">
+              <a href="https://www.facebook.com/nduwumukiza.romainrens" target="_blank" rel="noreferrer" className="transition-colors hover:text-[#FF6C00]">
+                Facebook: nduwumukiza.romainrens
+              </a>
+              <a href="https://www.instagram.com/nduwumukizaromain_97" target="_blank" rel="noreferrer" className="transition-colors hover:text-[#FF6C00]">
+                Instagram: @nduwumukizaromain_97
+              </a>
+            </p>
             <a href="tel:+250722189516" className="mt-4 inline-flex items-center gap-2 text-[12px] font-medium text-gray-500 transition-colors hover:text-[#FF6C00]">
               <Phone className="h-4 w-4 text-[#FF6C00]" />
               0789 015 289 / +250 722 189 516

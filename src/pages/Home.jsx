@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { Link } from 'react-router-dom';
+import Seo from '../components/Seo';
 import { FiShoppingCart, FiStar, FiShare2, FiX, FiCheck, FiMoreHorizontal } from 'react-icons/fi';
 import { FaWhatsapp, FaFacebook, FaTwitter, FaLinkedin, FaTelegram } from 'react-icons/fa';
 import {
@@ -12,6 +13,7 @@ import api from '../lib/api';
 import { formatMoney } from '../lib/currency';
 import { toStoreProduct } from '../lib/productMapper';
 import { sendQuickOrder } from '../lib/orders';
+import { absoluteUrl } from '../lib/seo';
 import fallbackProducts, { getDiscountedProducts } from '../data/products';
 
 /* -------------------------------------------------------------------------- */
@@ -820,11 +822,31 @@ const Home = () => {
   const dealsOfTheDay = homeData?.flash?.length ? homeData.flash.map(toStoreProduct) : getDiscountedProducts().slice(0, 4);
   const newArrivals = homeData?.newArrivals?.length ? homeData.newArrivals.map(toStoreProduct) : products.slice(-6);
 
+  const homeStructuredData = {
+    '@type': 'ItemList',
+    name: 'Featured electronics and home appliances in Rwanda',
+    itemListElement: newArrivals.slice(0, 10).map((product, index) => ({
+      '@type': 'ListItem',
+      position: index + 1,
+      name: product.name,
+      url: absoluteUrl(`/product/${product.id}`),
+    })),
+  };
+
   return (
     <div
       className="min-h-screen overflow-x-hidden bg-[#F5F6FA] pb-24 text-gray-900 antialiased lg:pb-0"
       style={{ fontFamily: "'Plus Jakarta Sans', 'Inter', system-ui, sans-serif" }}
     >
+      <Seo
+        title="RN Smart Electronics Rwanda | TVs, Fridges, Washing Machines & Home Appliances"
+        description="Buy smart TVs, fridges, washing machines, cookers, speakers and home appliances in Kigali, Rwanda. Genuine products, free delivery over FRW 100,000 and easy WhatsApp ordering from RN Smart Electronics."
+        path="/"
+        structuredData={[homeStructuredData]}
+      />
+      <h1 className="sr-only">
+        Buy TVs, fridges, washing machines and home appliances in Rwanda - RN Smart Electronics
+      </h1>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
         .no-scrollbar { scrollbar-width: none; -ms-overflow-style: none; }

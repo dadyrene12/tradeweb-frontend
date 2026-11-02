@@ -16,8 +16,8 @@ const MAP_URL = 'https://www.google.com/maps/search/?api=1&query=Nyarugenge+Kiga
 
 // Real social pages for RN Smart Electronics.
 const SOCIALS = [
-  { label: 'Facebook', icon: FiFacebook, href: 'https://www.facebook.com/nduwumukiza.romainrens' },
-  { label: 'Instagram', icon: FiInstagram, href: 'https://www.instagram.com/nduwumukizaromain_97' },
+  { label: 'Facebook', handle: 'nduwumukiza.romainrens', icon: FiFacebook, href: 'https://www.facebook.com/nduwumukiza.romainrens' },
+  { label: 'Instagram', handle: 'nduwumukizaromain_97', icon: FiInstagram, href: 'https://www.instagram.com/nduwumukizaromain_97' },
   { label: 'Twitter', icon: FiTwitter, href: 'https://twitter.com' },
   { label: 'YouTube', icon: FiYoutube, href: 'https://youtube.com' },
 ];
@@ -189,13 +189,14 @@ const Footer = () => {
             </div>
 
             <div className="flex items-center gap-2">
-              {SOCIALS.map(({ label, icon: Icon, href }) => (
+              {SOCIALS.map(({ label, handle, icon: Icon, href }) => (
                 <a
                   key={label}
                   href={href}
                   target="_blank"
                   rel="noreferrer"
-                  aria-label={label}
+                  aria-label={handle ? `${label}: ${handle}` : label}
+                  title={handle ? `@${handle}` : label}
                   className="flex h-9 w-9 items-center justify-center rounded-full bg-white/10 text-white/80 transition-all hover:-translate-y-0.5 hover:bg-[#FF6C00] hover:text-white"
                 >
                   <Icon className="h-4 w-4" />

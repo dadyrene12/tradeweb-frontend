@@ -18,6 +18,7 @@ import {
   FiX,
 } from 'react-icons/fi';
 import { FaWhatsapp } from 'react-icons/fa';
+import Seo from '../components/Seo';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
 import { formatMoney } from '../lib/currency'; // single import: do NOT declare formatMoney again below
@@ -331,6 +332,12 @@ const Cart = () => {
   /* ---------------------------------------------------------------------- */
   return (
     <div className="min-h-screen bg-gray-50">
+      <Seo
+        title="Shopping Cart | RN Smart Electronics"
+        description="Review your selected electronics and home appliances, add delivery details and send your order to RN Smart Electronics on WhatsApp or by email."
+        path="/cart"
+        noindex
+      />
       <div className="mx-auto max-w-[1400px] px-4 py-6 sm:px-6 lg:px-8">
         {/* Breadcrumb */}
         <nav aria-label="Breadcrumb" className="mb-6 flex items-center gap-2 text-sm text-gray-600">

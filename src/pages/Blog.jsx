@@ -1,8 +1,10 @@
 import React, { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
+import Seo from '../components/Seo';
 import { FiChevronRight, FiSearch, FiClock, FiCalendar, FiArrowRight, FiX, FiTrendingUp, FiGrid } from 'react-icons/fi';
 import { FaWhatsapp } from 'react-icons/fa';
 import { FileSearch } from 'lucide-react';
+import { SITE_NAME, absoluteUrl, breadcrumbSchema } from '../lib/seo';
 
 /* -------------------------------------------------------------------------- */
 /*  Edit your articles here. These are sample posts: replace with your own.    */
@@ -93,8 +95,34 @@ const Blog = () => {
   const rest = featured ? filtered.slice(1) : filtered;
   const shown = rest.slice(0, visible);
 
+  const blogStructuredData = [
+    {
+      '@type': 'Blog',
+      name: 'RN Smart Electronics Blog',
+      description:
+        'Buying guides, care tips and smart home advice for TVs, fridges, washing machines and home appliances in Rwanda.',
+      url: absoluteUrl('/blog'),
+      inLanguage: 'en-RW',
+      publisher: {
+        '@type': 'Organization',
+        name: SITE_NAME,
+      },
+    },
+    breadcrumbSchema([
+      { name: 'Home', path: '/' },
+      { name: 'Blog', path: '/blog' },
+    ]),
+  ];
+
   return (
     <div className="min-h-screen overflow-x-hidden bg-[#F3F4F6] antialiased" style={{ fontFamily: "'Plus Jakarta Sans', 'Inter', system-ui, sans-serif" }}>
+      <Seo
+        title="Electronics Buying Guides & Home Appliance Tips | RN Smart Electronics"
+        description="Practical buying guides, care tips and smart home advice from RN Smart Electronics in Rwanda. Learn how to choose TVs, fridges, washing machines and more."
+        path="/blog"
+        noindex={Boolean(query.trim())}
+        structuredData={blogStructuredData}
+      />
       <style>{`@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
         .no-scrollbar { scrollbar-width: none; -ms-overflow-style: none; }
         .no-scrollbar::-webkit-scrollbar { display: none; }`}</style>

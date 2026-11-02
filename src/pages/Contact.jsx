@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
+import Seo from '../components/Seo';
 import toast from 'react-hot-toast';
 import {
   FiMail, FiPhone, FiMapPin, FiChevronRight, FiSend, FiClock, FiCopy,
   FiAlertCircle, FiCheckCircle, FiArrowUpRight, FiHelpCircle,
 } from 'react-icons/fi';
 import { FaWhatsapp } from 'react-icons/fa';
+import { SITE_NAME, absoluteUrl, breadcrumbSchema } from '../lib/seo';
 
 /* -------------------------------------------------------------------------- */
 /*  Settings: edit these to match your shop                                    */
@@ -146,8 +148,38 @@ const Contact = () => {
     }
   };
 
+  const contactStructuredData = [
+    {
+      '@type': 'ContactPage',
+      name: `Contact ${SITE_NAME}`,
+      description: `Contact ${SITE_NAME} in Kigali, Rwanda by WhatsApp, phone or email for product advice, delivery and orders.`,
+      url: absoluteUrl('/contact'),
+    },
+    {
+      '@type': 'FAQPage',
+      mainEntity: faqs.map((faq) => ({
+        '@type': 'Question',
+        name: faq.q,
+        acceptedAnswer: {
+          '@type': 'Answer',
+          text: faq.a,
+        },
+      })),
+    },
+    breadcrumbSchema([
+      { name: 'Home', path: '/' },
+      { name: 'Contact', path: '/contact' },
+    ]),
+  ];
+
   return (
     <div className="min-h-screen overflow-x-hidden bg-[#F3F4F6] antialiased" style={{ fontFamily: "'Plus Jakarta Sans', 'Inter', system-ui, sans-serif" }}>
+      <Seo
+        title="Contact RN Smart Electronics | WhatsApp, Phone & Store in Kigali"
+        description="Contact RN Smart Electronics in Kigali, Rwanda for product advice, delivery and orders. Chat on WhatsApp +250 722 189 516, call 0789 015 289 or visit us in Nyarugenge."
+        path="/contact"
+        structuredData={contactStructuredData}
+      />
       <style>{`@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');`}</style>
 
       {/* ---------- Hero ---------- */}

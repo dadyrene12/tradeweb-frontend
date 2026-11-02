@@ -1,10 +1,17 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { FiSearch } from 'react-icons/fi';
+import Seo from '../components/Seo';
 
 const TrackOrder = () => {
   return (
     <div className="bg-gray-50 min-h-screen">
+      <Seo
+        title="Track Your Order | RN Smart Electronics"
+        description="Track the status of your RN Smart Electronics order using your order ID and billing email."
+        path="/track"
+        noindex
+      />
       <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8 py-6">
         <nav className="text-sm text-gray-600 flex items-center gap-2 mb-6">
           <Link to="/" className="hover:text-[#1e73be]">Home</Link>
