@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import Header from './components/Header';
@@ -34,6 +34,11 @@ function AppContent() {
   const authPages = ['/login', '/register', '/verify-email', '/forgot-password', '/reset-password'];
   const isAdminPage = location.pathname.startsWith('/admin');
   const hideHeaderFooter = authPages.includes(location.pathname) || isAdminPage;
+
+  useEffect(() => {
+    if (location.hash) return;
+    window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+  }, [location.pathname, location.search, location.hash]);
 
   return (
     <div className="min-h-screen flex flex-col">

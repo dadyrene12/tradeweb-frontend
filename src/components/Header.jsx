@@ -128,6 +128,23 @@ const Header = () => {
     </form>
   );
 
+  // NavLink only matches the pathname, so /shop would light up every
+  // category link (they all live under /shop). Compare the query too.
+  const isLinkActive = (link) => {
+    const [path, queryString] = link.to.split('?');
+    if (location.pathname !== path) return false;
+
+    if (queryString) {
+      const wanted = new URLSearchParams(queryString);
+      const current = new URLSearchParams(location.search);
+      return [...wanted.entries()].every(([key, value]) => current.get(key) === value);
+    }
+
+    // Plain /shop stays active for searches, but not when a category filter is on.
+    if (path === '/shop') return !new URLSearchParams(location.search).get('category');
+    return true;
+  };
+
   const linkClass = ({ isActive }) =>
     `relative block px-3 py-4 text-[14px] font-semibold transition-colors after:absolute after:inset-x-3 after:bottom-0 after:h-[3px] after:rounded-t-full after:transition-all xl:px-4 xl:after:inset-x-4 ${
       isActive
@@ -300,7 +317,7 @@ const Header = () => {
             <ul className="flex items-stretch">
               {navLinks.map((l) => (
                 <li key={l.label} className={l.secondary ? 'hidden xl:block' : ''}>
-                  <NavLink to={l.to} end={l.end} className={linkClass}>{l.label}</NavLink>
+                  <NavLink to={l.to} end={l.end} className={() => linkClass({ isActive: isLinkActive(l) })}>{l.label}</NavLink>
                 </li>
               ))}
             </ul>
@@ -354,9 +371,10 @@ const Header = () => {
                     <NavLink
                       to={l.to}
                       end={l.end}
-                      className={({ isActive }) =>
-                        `flex items-center justify-between rounded-xl px-3 py-3 text-[15px] font-semibold ${isActive ? 'bg-orange-50 text-[#FF6C00]' : 'text-[#0B1B33] hover:bg-gray-50'}`
-                      }
+                      className={() => {
+                        const active = isLinkActive(l);
+                        return `flex items-center justify-between rounded-xl px-3 py-3 text-[15px] font-semibold ${active ? 'bg-orange-50 text-[#FF6C00]' : 'text-[#0B1B33] hover:bg-gray-50'}`;
+                      }}
                     >
                       {l.label}
                       <FiChevronRight className="h-4 w-4 text-gray-300" />
