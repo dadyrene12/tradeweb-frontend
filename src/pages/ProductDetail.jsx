@@ -5,13 +5,20 @@ import {
   FiShoppingCart, FiHeart, FiShare2, FiX, FiMinus, FiPlus, FiCheck,
   FiTruck, FiShield, FiRefreshCw, FiCopy, FiMail, FiChevronLeft, FiChevronRight,
 } from 'react-icons/fi';
-import { FaWhatsapp, FaFacebook, FaTwitter, FaLinkedin, FaTelegram, FaStar, FaRegStar } from 'react-icons/fa';
+import { FaWhatsapp, FaFacebook, FaTwitter, FaLinkedin, FaInstagram, FaStar, FaRegStar } from 'react-icons/fa';
 import { useCart } from '../context/CartContext';
 import api from '../lib/api';
 import { formatMoney } from '../lib/currency';
 import { toStoreProduct } from '../lib/productMapper';
 import { sendQuickOrder } from '../lib/orders';
-import { SITE_NAME, absoluteImage, absoluteUrl, breadcrumbSchema, truncate } from '../lib/seo';
+import { SITE_NAME, STORE_INSTAGRAM, absoluteImage, absoluteUrl, breadcrumbSchema, truncate } from '../lib/seo';
+import {
+  buildProductCaption,
+  buildProductShareUrl,
+  prepareInstagramPost,
+  shareToWhatsApp,
+  shareResultMessage,
+} from '../lib/share';
 import fallbackProducts, { getProductById } from '../data/products';
 
 const STORE_WHATSAPP_NUMBER = '250722189516';
@@ -51,6 +58,7 @@ const ProductDetail = () => {
   const [product, setProduct] = useState(initialProduct);
   const [related, setRelated] = useState([]);
   const productUrl = window.location.href;
+  const productShareUrl = buildProductShareUrl(product);
 
   useEffect(() => {
     let active = true;
@@ -204,12 +212,37 @@ const ProductDetail = () => {
 
   const open = (url) => window.open(url, '_blank', 'noopener,noreferrer');
   const shareText = `Check out ${product.name} - ${formatMoney(product.price)}`;
+
+  const shareToInstagram = async () => {
+    const result = await prepareInstagramPost({
+      title: product.name,
+      caption: buildProductCaption(product, productShareUrl),
+      imageUrl: product.image || product.images?.[0],
+      profileUrl: STORE_INSTAGRAM,
+    });
+    if (result.status === 'cancelled') {
+      setShowShare(false);
+      return;
+    }
+    setToast(shareResultMessage(result.status));
+    setShowShare(false);
+  };
+
+  const shareOnWhatsApp = () => {
+    shareToWhatsApp({
+      text: buildProductCaption(product, ''),
+      url: productShareUrl,
+    });
+    setToast(shareResultMessage('whatsapp'));
+    setShowShare(false);
+  };
+
   const shareTargets = [
-    { label: 'WhatsApp', icon: FaWhatsapp, color: 'text-green-500', run: () => open(`https://wa.me/?text=${encodeURIComponent(`${shareText} ${productUrl}`)}`) },
-    { label: 'Facebook', icon: FaFacebook, color: 'text-blue-600', run: () => open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(productUrl)}`) },
-    { label: 'Twitter', icon: FaTwitter, color: 'text-sky-500', run: () => open(`https://twitter.com/intent/tweet?url=${encodeURIComponent(productUrl)}&text=${encodeURIComponent(shareText)}`) },
-    { label: 'LinkedIn', icon: FaLinkedin, color: 'text-blue-700', run: () => open(`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(productUrl)}`) },
-    { label: 'Telegram', icon: FaTelegram, color: 'text-sky-400', run: () => open(`https://t.me/share/url?url=${encodeURIComponent(productUrl)}&text=${encodeURIComponent(shareText)}`) },
+    { label: 'WhatsApp', icon: FaWhatsapp, color: 'text-green-500', run: shareOnWhatsApp },
+    { label: 'Facebook', icon: FaFacebook, color: 'text-blue-600', run: () => open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(productShareUrl)}`) },
+    { label: 'Twitter', icon: FaTwitter, color: 'text-sky-500', run: () => open(`https://twitter.com/intent/tweet?url=${encodeURIComponent(productShareUrl)}&text=${encodeURIComponent(shareText)}`) },
+    { label: 'LinkedIn', icon: FaLinkedin, color: 'text-blue-700', run: () => open(`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(productShareUrl)}`) },
+    { label: 'Instagram', icon: FaInstagram, color: 'text-[#E1306C]', run: shareToInstagram },
     { label: 'Email', icon: FiMail, color: 'text-gray-600', run: () => (window.location.href = `mailto:?subject=${encodeURIComponent(`Check out ${product.name}`)}&body=${encodeURIComponent(`${shareText}\n\n${productUrl}`)}`) },
   ];
 

@@ -3,10 +3,17 @@ import toast from 'react-hot-toast';
 import {
   FiPlus, FiSearch, FiEdit2, FiTrash2, FiX, FiLoader, FiChevronLeft,
   FiChevronRight, FiStar, FiPackage, FiUpload, FiImage, FiAlertTriangle,
-  FiTag, FiDollarSign, FiLayers,
+  FiTag, FiDollarSign, FiLayers, FiCopy, FiExternalLink,
 } from 'react-icons/fi';
+import { FaInstagram, FaWhatsapp } from 'react-icons/fa';
 import api, { getApiError } from '../../lib/api';
 import { CURRENCY, formatMoney as money } from '../../lib/currency';
+import { SITE_NAME, SITE_URL, STORE_INSTAGRAM } from '../../lib/seo';
+import {
+  buildProductShareUrl,
+  shareToWhatsApp,
+  shareResultMessage,
+} from '../../lib/share';
 
 /*
   Orange-based theme
@@ -87,6 +94,10 @@ const AdminProducts = () => {
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [deleting, setDeleting] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [promoProduct, setPromoProduct] = useState(null);
+  const [promoCaption, setPromoCaption] = useState('');
+  const [instagramProfile, setInstagramProfile] = useState(STORE_INSTAGRAM);
+  const [postingInstagram, setPostingInstagram] = useState(false);
 
   useEffect(() => {
     const timeout = setTimeout(() => {
@@ -121,6 +132,16 @@ const AdminProducts = () => {
     api
       .get('/admin/categories')
       .then(({ data }) => setCategories(data.categories || []))
+      .catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    api
+      .get('/settings')
+      .then(({ data }) => {
+        const url = data?.settings?.social?.instagram;
+        if (url) setInstagramProfile(url);
+      })
       .catch(() => {});
   }, []);
 
@@ -264,6 +285,81 @@ const AdminProducts = () => {
       toast.error(getApiError(deleteError).message);
     } finally {
       setDeleting(false);
+    }
+  };
+
+  const buildInstagramCaption = (product) => {
+    const productUrl = buildProductShareUrl(product);
+    const brand = product.brand ? ` by ${product.brand}` : '';
+    const category = product.category ? product.category.replace(/[-_]/g, ' ') : 'electronics';
+    const description = String(product.description || '')
+      .replace(/\s+/g, ' ')
+      .trim()
+      .slice(0, 180);
+    const hasDiscount = Number(product.oldPrice) > Number(product.price);
+    const discount = hasDiscount
+      ? Math.round(((product.oldPrice - product.price) / product.oldPrice) * 100)
+      : 0;
+    const priceLine = hasDiscount
+      ? `🔥 LIMITED OFFER: Was ${money(product.oldPrice)} — now ${money(product.price)} (save ${discount}%)!`
+      : `💥 Special price: ${money(product.price)}`;
+    const stockLine = Number(product.stock) > 0
+      ? '✅ In stock — ready for fast delivery.'
+      : '📩 Message us today to reserve yours.';
+    const brandTag = String(product.brand || '').replace(/[^a-z0-9]/gi, '');
+    const categoryTag = category.replace(/[^a-z0-9]/gi, '');
+
+    return [
+      '✨ NEW ARRIVAL AT RN SMART ELECTRONICS ✨',
+      '',
+      `👉 ${product.name}${brand}`,
+      description,
+      '',
+      priceLine,
+      stockLine,
+      '🚚 Fast delivery in Kigali & across Rwanda.',
+      '💳 Order on WhatsApp: +250 722 189 516',
+      `🛒 Shop now: ${productUrl}`,
+      '',
+      `#${SITE_NAME.replace(/[^a-z0-9]/gi, '')} #${categoryTag} ${brandTag ? `#${brandTag} ` : ''}#Kigali #Rwanda #HomeAppliances #Electronics #Deals #ShopLocal`,
+    ]
+      .filter((line, index, lines) => line !== '' || (index > 0 && lines[index - 1] !== ''))
+      .join('\n');
+  };
+
+  const openPromo = (product) => {
+    setPromoProduct(product);
+    setPromoCaption(buildInstagramCaption(product));
+  };
+
+  const copyText = async (text, message) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      toast.success(message);
+    } catch (error) {
+      toast.error('Could not copy to clipboard');
+    }
+  };
+
+  const sendPromoWhatsApp = () => {
+    if (!promoProduct) return;
+    const url = buildProductShareUrl(promoProduct);
+    shareToWhatsApp({ text: promoCaption, url: promoCaption.includes(url) ? '' : url });
+    toast.success(shareResultMessage('whatsapp'));
+  };
+
+  const postPromoInstagram = async () => {
+    if (!promoProduct || postingInstagram) return;
+    setPostingInstagram(true);
+    try {
+      const { data } = await api.post(`/admin/products/${promoProduct._id}/instagram`, {
+        caption: promoCaption,
+      });
+      toast.success(data?.message || 'Product posted to Instagram.');
+    } catch (error) {
+      toast.error(getApiError(error).message);
+    } finally {
+      setPostingInstagram(false);
     }
   };
 
@@ -438,6 +534,15 @@ const AdminProducts = () => {
                       </td>
                       <td className="px-5 py-3.5">
                         <div className="flex justify-end gap-2">
+                          <button
+                            type="button"
+                            onClick={() => openPromo(product)}
+                            aria-label={`Share ${product.name} on Instagram`}
+                            title="Share on Instagram"
+                            className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-[#833AB4] via-[#FD1D1D] to-[#FCB045] text-white transition hover:opacity-90"
+                          >
+                            <FaInstagram className="h-4 w-4" />
+                          </button>
                           <button
                             type="button"
                             onClick={() => openEdit(product)}
@@ -664,6 +769,127 @@ const AdminProducts = () => {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Instagram promo modal */}
+      {promoProduct && (
+        <div className="fixed inset-0 z-[70] flex items-start justify-center overflow-y-auto bg-[#0B1B33]/60 p-4 py-8 backdrop-blur-sm">
+          <div className="w-full max-w-2xl overflow-hidden rounded-3xl bg-white shadow-2xl">
+            <div className="relative overflow-hidden bg-gradient-to-r from-[#833AB4] via-[#FD1D1D] to-[#FCB045] px-6 py-5 text-white">
+              <div className="pointer-events-none absolute -right-8 -top-10 h-32 w-32 rounded-full bg-white/15" />
+              <div className="relative flex items-center justify-between gap-3">
+                <div className="flex items-center gap-3">
+                  <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-white/20 ring-1 ring-white/30 backdrop-blur">
+                    <FaInstagram className="h-6 w-6" />
+                  </span>
+                  <div>
+                    <h3 className="text-[18px] font-extrabold">Promote on Instagram</h3>
+                    <p className="text-[12.5px] text-white/85">Ready-made ad caption for your Instagram profile.</p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setPromoProduct(null)}
+                  aria-label="Close"
+                  className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/20 transition hover:bg-white/30"
+                >
+                  <FiX className="h-5 w-5" />
+                </button>
+              </div>
+            </div>
+
+            <div className="space-y-4 px-5 py-5 sm:px-6">
+              <div className="flex items-center gap-3 rounded-2xl border border-orange-100 bg-orange-50/40 p-3">
+                {promoProduct.images?.[0] ? (
+                  <img src={promoProduct.images[0]} alt="" className="h-16 w-16 rounded-xl bg-white object-cover ring-1 ring-orange-100" />
+                ) : (
+                  <span className="flex h-16 w-16 items-center justify-center rounded-xl bg-white text-orange-300 ring-1 ring-orange-100">
+                    <FiPackage className="h-6 w-6" />
+                  </span>
+                )}
+                <div className="min-w-0">
+                  <p className="truncate text-[14px] font-extrabold text-[#0B1B33]">{promoProduct.name}</p>
+                  <p className="text-[12px] text-gray-500">
+                    {promoProduct.brand || 'No brand'} · {money(promoProduct.price)}
+                  </p>
+                </div>
+              </div>
+
+              <div>
+                <label className="mb-1.5 block text-[12.5px] font-bold text-[#0B1B33]">Promo caption</label>
+                <textarea
+                  value={promoCaption}
+                  onChange={(event) => setPromoCaption(event.target.value)}
+                  rows={10}
+                  className={`${textareaClass} text-[13px] leading-relaxed`}
+                />
+                <p className="mt-1 text-[11.5px] text-gray-500">
+                  Edit the words to match your campaign. Emojis and hashtags are already included.
+                </p>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4">
+                <button
+                  type="button"
+                  onClick={() => copyText(promoCaption, 'Instagram caption copied')}
+                  className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#0B1B33] px-3 py-2.5 text-[12.5px] font-bold text-white transition hover:bg-[#1a2f52]"
+                >
+                  <FiCopy className="h-4 w-4" /> Copy caption
+                </button>
+                <button
+                  type="button"
+                  onClick={() => copyText(`${SITE_URL}/product/${promoProduct._id}`, 'Product link copied')}
+                  className="inline-flex items-center justify-center gap-2 rounded-xl bg-orange-50 px-3 py-2.5 text-[12.5px] font-bold text-[#E65A00] transition hover:bg-orange-100"
+                >
+                  <FiCopy className="h-4 w-4" /> Copy link
+                </button>
+                <a
+                  href={promoProduct.images?.[0] || '#'}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center justify-center gap-2 rounded-xl bg-orange-50 px-3 py-2.5 text-[12.5px] font-bold text-[#E65A00] transition hover:bg-orange-100"
+                >
+                  <FiExternalLink className="h-4 w-4" /> Open image
+                </a>
+                <a
+                  href={instagramProfile}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center justify-center gap-2 rounded-xl bg-gray-100 px-3 py-2.5 text-[12.5px] font-bold text-gray-700 transition hover:bg-gray-200"
+                >
+                  <FaInstagram className="h-4 w-4" /> Profile
+                </a>
+              </div>
+
+              <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
+                <button
+                  type="button"
+                  onClick={sendPromoWhatsApp}
+                  className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#25D366] px-3 py-3 text-[13px] font-bold text-white shadow-md shadow-green-200 transition hover:bg-[#1DA851]"
+                >
+                  <FaWhatsapp className="h-4 w-4" /> Send on WhatsApp
+                </button>
+                <button
+                  type="button"
+                  onClick={postPromoInstagram}
+                  disabled={postingInstagram}
+                  className="inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#833AB4] via-[#FD1D1D] to-[#FCB045] px-3 py-3 text-[13px] font-bold text-white shadow-md shadow-pink-200 transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {postingInstagram ? (
+                    <FiLoader className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <FaInstagram className="h-4 w-4" />
+                  )}
+                  {postingInstagram ? 'Posting...' : 'Auto post to Instagram'}
+                </button>
+              </div>
+
+              <div className="rounded-xl border border-orange-100 bg-orange-50/50 p-3 text-[11.5px] leading-relaxed text-gray-600">
+                <b className="text-[#0B1B33]">How to post:</b> <b>Send on WhatsApp</b> opens WhatsApp directly with the caption and product link (the product image appears in the link preview). <b>Auto post to Instagram</b> publishes the product image and caption straight to your Instagram Business account. It needs Instagram API credentials on the server.
+              </div>
+            </div>
           </div>
         </div>
       )}

@@ -148,7 +148,11 @@ const Register = () => {
       }
 
       setSuccess({ email: form.email.trim(), emailSent: data.emailSent });
-      toast.success('Account created. Check your email to verify it.');
+      if (data.emailSent) {
+        toast.success('Account created. Check your email to verify it.');
+      } else {
+        toast.error('Account created, but the verification email could not be sent. Use the resend button below.');
+      }
     } catch (registerError) {
       const parsed = getApiError(registerError);
       setError(parsed.message);

@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import { Link } from 'react-router-dom';
 import Seo from '../components/Seo';
 import { FiShoppingCart, FiStar, FiShare2, FiX, FiCheck, FiMoreHorizontal } from 'react-icons/fi';
-import { FaWhatsapp, FaFacebook, FaTwitter, FaLinkedin, FaTelegram } from 'react-icons/fa';
+import { FaWhatsapp, FaFacebook, FaTwitter, FaLinkedin, FaInstagram } from 'react-icons/fa';
 import {
   Tv, WashingMachine, Refrigerator, CookingPot, Speaker, Blend, Flame, House,
   ChevronRight, ChevronLeft, LayoutGrid, ArrowRight, Truck, ShieldCheck,
@@ -13,7 +13,14 @@ import api from '../lib/api';
 import { formatMoney } from '../lib/currency';
 import { toStoreProduct } from '../lib/productMapper';
 import { sendQuickOrder } from '../lib/orders';
-import { absoluteUrl } from '../lib/seo';
+import { absoluteUrl, STORE_INSTAGRAM } from '../lib/seo';
+import {
+  buildProductCaption,
+  buildProductShareUrl,
+  prepareInstagramPost,
+  shareToWhatsApp,
+  shareResultMessage,
+} from '../lib/share';
 import fallbackProducts, { getDiscountedProducts } from '../data/products';
 
 /* -------------------------------------------------------------------------- */
@@ -689,6 +696,7 @@ const Home = () => {
   };
 
   const getProductUrl = () => (shareProduct ? `${window.location.origin}/product/${shareProduct.id}` : '');
+  const getShareUrl = () => buildProductShareUrl(shareProduct || {});
   const openShare = (url) => window.open(url, '_blank', 'noopener,noreferrer');
   const shareLabel = () => `Check out ${shareProduct?.name ?? ''}`;
   const enc = encodeURIComponent;
@@ -701,6 +709,34 @@ const Home = () => {
       /* dismissed by the user */
     }
   };
+  const shareToInstagram = async () => {
+    if (!shareProduct) return;
+    const url = getShareUrl();
+    const result = await prepareInstagramPost({
+      title: shareProduct.name,
+      caption: buildProductCaption(shareProduct, url),
+      imageUrl: shareProduct.image,
+      profileUrl: STORE_INSTAGRAM,
+    });
+    if (result.status === 'cancelled') {
+      setShowShareModal(false);
+      return;
+    }
+    showToast(shareResultMessage(result.status));
+    setShowShareModal(false);
+  };
+
+  const shareOnWhatsApp = () => {
+    if (!shareProduct) return;
+    const url = getShareUrl();
+    shareToWhatsApp({
+      text: buildProductCaption(shareProduct, ''),
+      url,
+    });
+    showToast(shareResultMessage('whatsapp'));
+    setShowShareModal(false);
+  };
+
   const copyLink = async () => {
     try {
       await navigator.clipboard.writeText(getProductUrl());
@@ -712,11 +748,11 @@ const Home = () => {
   };
 
   const shareTargets = [
-    { label: 'WhatsApp', icon: FaWhatsapp, color: 'text-[#25D366]', onClick: () => { openShare(`https://wa.me/?text=${enc(`${shareLabel()} ${getProductUrl()}`)}`); setShowShareModal(false); } },
-    { label: 'Facebook', icon: FaFacebook, color: 'text-[#1877F2]', onClick: () => openShare(`https://www.facebook.com/sharer/sharer.php?u=${enc(getProductUrl())}`) },
-    { label: 'Twitter', icon: FaTwitter, color: 'text-[#1DA1F2]', onClick: () => openShare(`https://twitter.com/intent/tweet?url=${enc(getProductUrl())}&text=${enc(shareLabel())}`) },
-    { label: 'LinkedIn', icon: FaLinkedin, color: 'text-[#0A66C2]', onClick: () => openShare(`https://www.linkedin.com/sharing/share-offsite/?url=${enc(getProductUrl())}`) },
-    { label: 'Telegram', icon: FaTelegram, color: 'text-[#229ED9]', onClick: () => openShare(`https://t.me/share/url?url=${enc(getProductUrl())}&text=${enc(shareLabel())}`) },
+    { label: 'WhatsApp', icon: FaWhatsapp, color: 'text-[#25D366]', onClick: shareOnWhatsApp },
+    { label: 'Facebook', icon: FaFacebook, color: 'text-[#1877F2]', onClick: () => openShare(`https://www.facebook.com/sharer/sharer.php?u=${enc(getShareUrl())}`) },
+    { label: 'Twitter', icon: FaTwitter, color: 'text-[#1DA1F2]', onClick: () => openShare(`https://twitter.com/intent/tweet?url=${enc(getShareUrl())}&text=${enc(shareLabel())}`) },
+    { label: 'LinkedIn', icon: FaLinkedin, color: 'text-[#0A66C2]', onClick: () => openShare(`https://www.linkedin.com/sharing/share-offsite/?url=${enc(getShareUrl())}`) },
+    { label: 'Instagram', icon: FaInstagram, color: 'text-[#E1306C]', onClick: shareToInstagram },
     { label: copied ? 'Copied' : 'Copy link', icon: copied ? FiCheck : FiShare2, color: copied ? 'text-emerald-600' : 'text-gray-600', onClick: copyLink },
     ...(canNativeShare ? [{ label: 'More…', icon: FiMoreHorizontal, color: 'text-gray-600', onClick: shareNative }] : []),
   ];

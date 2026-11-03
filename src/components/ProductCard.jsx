@@ -1,10 +1,19 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
+import toast from 'react-hot-toast';
 import { FiHeart, FiShoppingCart, FiEye, FiRefreshCw, FiShare2, FiX } from 'react-icons/fi';
 import { AiFillStar } from 'react-icons/ai';
-import { FaWhatsapp, FaFacebook, FaTwitter, FaLinkedin, FaTelegram } from 'react-icons/fa';
+import { FaWhatsapp, FaFacebook, FaTwitter, FaLinkedin, FaInstagram } from 'react-icons/fa';
 import { useCart } from '../context/CartContext';
 import { formatMoney } from '../lib/currency';
+import { STORE_INSTAGRAM } from '../lib/seo';
+import {
+  buildProductCaption,
+  buildProductShareUrl,
+  prepareInstagramPost,
+  shareToWhatsApp,
+  shareResultMessage,
+} from '../lib/share';
 
 const ProductCard = ({ product }) => {
   const { id, name, price, oldPrice, image, rating = 5 } = product;
@@ -13,6 +22,7 @@ const ProductCard = ({ product }) => {
   const [showShareModal, setShowShareModal] = useState(false);
 
   const productUrl = `${window.location.origin}/product/${id}`;
+  const productShareUrl = buildProductShareUrl(product);
 
   const handleAddToCart = (e) => {
     e.preventDefault();
@@ -32,21 +42,40 @@ const ProductCard = ({ product }) => {
   };
 
   const shareOnFacebook = () => {
-    window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(productUrl)}`, '_blank');
+    window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(productShareUrl)}`, '_blank');
   };
 
   const shareOnTwitter = () => {
     const text = `Check out ${name} - ${formatMoney(price)}`;
-    window.open(`https://twitter.com/intent/tweet?url=${encodeURIComponent(productUrl)}&text=${encodeURIComponent(text)}`, '_blank');
+    window.open(`https://twitter.com/intent/tweet?url=${encodeURIComponent(productShareUrl)}&text=${encodeURIComponent(text)}`, '_blank');
   };
 
   const shareOnLinkedIn = () => {
-    window.open(`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(productUrl)}`, '_blank');
+    window.open(`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(productShareUrl)}`, '_blank');
   };
 
-  const shareOnTelegram = () => {
-    const text = `Check out ${name} - ${formatMoney(price)} ${productUrl}`;
-    window.open(`https://t.me/share/url?url=${encodeURIComponent(productUrl)}&text=${encodeURIComponent(text)}`, '_blank');
+  const shareOnInstagram = async () => {
+    const result = await prepareInstagramPost({
+      title: name,
+      caption: buildProductCaption(product, productShareUrl),
+      imageUrl: image,
+      profileUrl: STORE_INSTAGRAM,
+    });
+    if (result.status === 'cancelled') {
+      setShowShareModal(false);
+      return;
+    }
+    toast.success(shareResultMessage(result.status));
+    setShowShareModal(false);
+  };
+
+  const shareOnWhatsApp = () => {
+    shareToWhatsApp({
+      text: buildProductCaption(product, ''),
+      url: productShareUrl,
+    });
+    toast.success(shareResultMessage('whatsapp'));
+    setShowShareModal(false);
   };
 
   const copyLink = () => {
@@ -130,7 +159,7 @@ const ProductCard = ({ product }) => {
                 </button>
               </div>
               <div className="grid grid-cols-3 gap-3 mb-4">
-                <button onClick={(e) => { e.preventDefault(); handleBuyOnWhatsapp(e); }} className="flex flex-col items-center gap-2 p-3 hover:bg-green-50 rounded-lg transition-colors">
+                <button onClick={(e) => { e.preventDefault(); shareOnWhatsApp(); }} className="flex flex-col items-center gap-2 p-3 hover:bg-green-50 rounded-lg transition-colors">
                   <FaWhatsapp className="w-7 h-7 text-green-500" />
                   <span className="text-xs text-gray-700">WhatsApp</span>
                 </button>
@@ -146,9 +175,9 @@ const ProductCard = ({ product }) => {
                   <FaLinkedin className="w-7 h-7 text-blue-700" />
                   <span className="text-xs text-gray-700">LinkedIn</span>
                 </button>
-                <button onClick={(e) => { e.preventDefault(); shareOnTelegram(); }} className="flex flex-col items-center gap-2 p-3 hover:bg-blue-50 rounded-lg transition-colors">
-                  <FaTelegram className="w-7 h-7 text-blue-500" />
-                  <span className="text-xs text-gray-700">Telegram</span>
+                <button onClick={(e) => { e.preventDefault(); shareOnInstagram(); }} className="flex flex-col items-center gap-2 p-3 hover:bg-pink-50 rounded-lg transition-colors">
+                  <FaInstagram className="w-7 h-7 text-[#E1306C]" />
+                  <span className="text-xs text-gray-700">Instagram</span>
                 </button>
                 <button onClick={(e) => { e.preventDefault(); copyLink(); }} className="flex flex-col items-center gap-2 p-3 hover:bg-gray-50 rounded-lg transition-colors">
                   <FiShare2 className="w-7 h-7 text-gray-600" />

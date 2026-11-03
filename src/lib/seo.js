@@ -9,6 +9,8 @@ export const STORE_EMAIL = 'rnsmartelectronics@gmail.com';
 export const STORE_ADDRESS = 'Kigali - Nyarugenge, Rwanda';
 export const STORE_FACEBOOK = 'https://www.facebook.com/nduwumukiza.romainrens';
 export const STORE_INSTAGRAM = 'https://www.instagram.com/nduwumukizaromain_97';
+export const STORE_TIKTOK =
+  'https://www.tiktok.com/@rn.smart.electron?_r=1&_t=ZS-9B63q1HmoQG';
 
 export const DEFAULT_TITLE =
   'RN Smart Electronics | Buy TVs, Fridges & Home Appliances in Rwanda';
@@ -58,7 +60,7 @@ export const organizationSchema = {
     addressRegion: 'Kigali City',
     addressCountry: 'RW',
   },
-  sameAs: [STORE_FACEBOOK, STORE_INSTAGRAM],
+  sameAs: [STORE_FACEBOOK, STORE_INSTAGRAM, STORE_TIKTOK],
   contactPoint: [
     {
       '@type': 'ContactPoint',
@@ -131,7 +133,7 @@ export const electronicsStoreSchema = {
       closes: '17:00',
     },
   ],
-  sameAs: [STORE_FACEBOOK, STORE_INSTAGRAM],
+  sameAs: [STORE_FACEBOOK, STORE_INSTAGRAM, STORE_TIKTOK],
 };
 
 export const breadcrumbSchema = (items = []) => ({

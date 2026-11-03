@@ -5,7 +5,7 @@ import {
   Sparkles, Globe2, ShieldCheck, BadgeCheck, MessageCircle, Smartphone,
   ChevronDown, Mail, Send, Phone, ArrowRight
 } from 'lucide-react';
-import { FaFacebook, FaInstagram, FaTwitter, FaYoutube } from 'react-icons/fa';
+import { FaFacebook, FaInstagram, FaTwitter, FaYoutube, FaTiktok } from 'react-icons/fa';
 
 const PreFooter = () => {
   const [openFaq, setOpenFaq] = useState(0);
@@ -222,6 +222,7 @@ const PreFooter = () => {
               {[
                 { icon: FaFacebook, href: 'https://www.facebook.com/nduwumukiza.romainrens', label: 'Facebook', handle: 'nduwumukiza.romainrens' },
                 { icon: FaInstagram, href: 'https://www.instagram.com/nduwumukizaromain_97', label: 'Instagram', handle: 'nduwumukizaromain_97' },
+                { icon: FaTiktok, href: 'https://www.tiktok.com/@rn.smart.electron?_r=1&_t=ZS-9B63q1HmoQG', label: 'TikTok', handle: 'rn.smart.electron' },
                 { icon: FaTwitter, href: 'https://twitter.com', label: 'Twitter' },
                 { icon: FaYoutube, href: 'https://youtube.com', label: 'YouTube' },
               ].map((social) => {
@@ -247,6 +248,9 @@ const PreFooter = () => {
               </a>
               <a href="https://www.instagram.com/nduwumukizaromain_97" target="_blank" rel="noreferrer" className="transition-colors hover:text-[#FF6C00]">
                 Instagram: @nduwumukizaromain_97
+              </a>
+              <a href="https://www.tiktok.com/@rn.smart.electron?_r=1&_t=ZS-9B63q1HmoQG" target="_blank" rel="noreferrer" className="transition-colors hover:text-[#FF6C00]">
+                TikTok: @rn.smart.electron
               </a>
             </p>
             <a href="tel:+250722189516" className="mt-4 inline-flex items-center gap-2 text-[12px] font-medium text-gray-500 transition-colors hover:text-[#FF6C00]">

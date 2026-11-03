@@ -4,7 +4,7 @@ import {
   FiFacebook, FiTwitter, FiInstagram, FiYoutube, FiMapPin, FiPhone, FiMail,
   FiChevronRight, FiArrowUp,
 } from 'react-icons/fi';
-import { FaWhatsapp } from 'react-icons/fa';
+import { FaWhatsapp, FaTiktok } from 'react-icons/fa';
 import { Truck, ShieldCheck, RotateCcw, Headphones } from 'lucide-react';
 
 /* -------------------------------------------------------------------------- */
@@ -18,6 +18,7 @@ const MAP_URL = 'https://www.google.com/maps/search/?api=1&query=Nyarugenge+Kiga
 const SOCIALS = [
   { label: 'Facebook', handle: 'nduwumukiza.romainrens', icon: FiFacebook, href: 'https://www.facebook.com/nduwumukiza.romainrens' },
   { label: 'Instagram', handle: 'nduwumukizaromain_97', icon: FiInstagram, href: 'https://www.instagram.com/nduwumukizaromain_97' },
+  { label: 'TikTok', handle: 'rn.smart.electron', icon: FaTiktok, href: 'https://www.tiktok.com/@rn.smart.electron?_r=1&_t=ZS-9B63q1HmoQG' },
   { label: 'Twitter', icon: FiTwitter, href: 'https://twitter.com' },
   { label: 'YouTube', icon: FiYoutube, href: 'https://youtube.com' },
 ];
