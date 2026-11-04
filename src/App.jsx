@@ -5,6 +5,7 @@ import Header from './components/Header';
 import Footer from './components/Footer';
 import PreFooter from './components/PreFooter';
 import AiGuide from './components/AiGuide';
+import Seo from './components/Seo';
 import Home from './pages/Home';
 import Shop from './pages/Shop';
 import ProductDetail from './pages/ProductDetail';
@@ -29,11 +30,26 @@ import AdminUsers from './pages/admin/AdminUsers';
 import AdminSettings from './pages/admin/AdminSettings';
 import AdminCategories from './pages/admin/AdminCategories';
 
+const PRIVATE_PATHS = [
+  '/admin',
+  '/account',
+  '/wishlist',
+  '/compare',
+  '/login',
+  '/register',
+  '/verify-email',
+  '/forgot-password',
+  '/reset-password',
+];
+
 function AppContent() {
   const location = useLocation();
   const authPages = ['/login', '/register', '/verify-email', '/forgot-password', '/reset-password'];
   const isAdminPage = location.pathname.startsWith('/admin');
   const hideHeaderFooter = authPages.includes(location.pathname) || isAdminPage;
+  const isPrivatePage = PRIVATE_PATHS.some(
+    (path) => location.pathname === path || location.pathname.startsWith(`${path}/`)
+  );
 
   useEffect(() => {
     if (location.hash) return;
@@ -42,6 +58,14 @@ function AppContent() {
 
   return (
     <div className="min-h-screen flex flex-col">
+      {isPrivatePage && (
+        <Seo
+          title="Secure Account Area | RN Smart Electronics"
+          description="Private account and checkout pages for RN Smart Electronics customers in Rwanda."
+          path={location.pathname}
+          noindex
+        />
+      )}
       {!hideHeaderFooter && <Header />}
       <main className="flex-1">
         <Routes>

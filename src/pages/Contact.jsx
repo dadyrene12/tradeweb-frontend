@@ -12,7 +12,7 @@ import { SITE_NAME, absoluteUrl, breadcrumbSchema } from '../lib/seo';
 /* -------------------------------------------------------------------------- */
 /*  Settings: edit these to match your shop                                    */
 /* -------------------------------------------------------------------------- */
-const WHATSAPP_NUMBER = '250722189516';
+const WHATSAPP_NUMBER = '250789015289';
 const EMAIL = 'rnsmartelectronics@gmail.com';
 const MAP_QUERY = 'Nyarugenge,Kigali,Rwanda';
 
@@ -30,7 +30,7 @@ const contactCards = [
     icon: FaWhatsapp,
     title: 'WhatsApp',
     note: 'Fastest way to reach us',
-    lines: [{ text: '+250 722 189 516', href: `https://wa.me/${WHATSAPP_NUMBER}` }],
+    lines: [{ text: '0789 015 289', href: `https://wa.me/${WHATSAPP_NUMBER}` }],
     action: { label: 'Chat now', href: `https://wa.me/${WHATSAPP_NUMBER}`, external: true },
     tone: 'bg-[#25D366]/10 text-[#1DA851] ring-[#25D366]/20 group-hover:bg-[#25D366] group-hover:text-white',
   },
@@ -40,9 +40,8 @@ const contactCards = [
     note: 'Speak to our team',
     lines: [
       { text: '0789 015 289', href: 'tel:+250789015289' },
-      { text: '+250 722 189 516', href: 'tel:+250722189516' },
     ],
-    action: { label: 'Call now', href: 'tel:+250722189516' },
+    action: { label: 'Call now', href: 'tel:+250789015289' },
     tone: 'bg-orange-50 text-[#FF6C00] ring-orange-100 group-hover:bg-[#FF6C00] group-hover:text-white',
   },
   {
@@ -176,7 +175,7 @@ const Contact = () => {
     <div className="min-h-screen overflow-x-hidden bg-[#F3F4F6] antialiased" style={{ fontFamily: "'Plus Jakarta Sans', 'Inter', system-ui, sans-serif" }}>
       <Seo
         title="Contact RN Smart Electronics | WhatsApp, Phone & Store in Kigali"
-        description="Contact RN Smart Electronics in Kigali, Rwanda for product advice, delivery and orders. Chat on WhatsApp +250 722 189 516, call 0789 015 289 or visit us in Nyarugenge."
+        description="Contact RN Smart Electronics in Kigali, Rwanda for product advice, delivery and orders. Chat on WhatsApp +250 789 015 289, call 0789 015 289 or visit us in Nyarugenge."
         path="/contact"
         structuredData={contactStructuredData}
       />
@@ -212,7 +211,7 @@ const Contact = () => {
                 Chat on WhatsApp
               </a>
               <a
-                href="tel:+250722189516"
+                href="tel:+250789015289"
                 className="inline-flex items-center gap-2.5 rounded-xl bg-white/10 px-6 py-3.5 text-[14px] font-bold text-white ring-1 ring-white/25 backdrop-blur transition-colors hover:bg-white/20"
               >
                 <FiPhone className="h-5 w-5" />

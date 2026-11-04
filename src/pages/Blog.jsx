@@ -10,7 +10,7 @@ import { SITE_NAME, absoluteUrl, breadcrumbSchema } from '../lib/seo';
 /*  Edit your articles here. These are sample posts: replace with your own.    */
 /*  `popular: true` shows an article in the "Popular reads" list.              */
 /* -------------------------------------------------------------------------- */
-const WHATSAPP_NUMBER = '250722189516';
+const WHATSAPP_NUMBER = '250789015289';
 const PAGE_SIZE = 6;
 
 const posts = [

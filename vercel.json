@@ -2,5 +2,29 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "framework": "create-react-app",
   "buildCommand": "npm run build",
-  "outputDirectory": "build"
+  "outputDirectory": "build",
+  "redirects": [
+    {
+      "source": "/:path*",
+      "has": [{ "type": "host", "value": "rnsmartelectronic.rw" }],
+      "destination": "https://www.rnsmartelectronic.rw/:path*",
+      "permanent": true
+    },
+    {
+      "source": "/:path*",
+      "has": [{ "type": "host", "value": "rn-smartelectronic-campany-ltdrw.vercel.app" }],
+      "destination": "https://www.rnsmartelectronic.rw/:path*",
+      "permanent": true
+    }
+  ],
+  "rewrites": [
+    {
+      "source": "/share/:path*",
+      "destination": "https://tradeweb-backend.onrender.com/share/:path*"
+    },
+    {
+      "source": "/sitemap.xml",
+      "destination": "https://tradeweb-backend.onrender.com/sitemap.xml"
+    }
+  ]
 }

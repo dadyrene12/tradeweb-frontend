@@ -27,7 +27,7 @@ import fallbackProducts, { getDiscountedProducts } from '../data/products';
 /*  Settings                                                                   */
 /* -------------------------------------------------------------------------- */
 // Optional: your store's WhatsApp number (digits only, with country code, e.g. 250788000000).
-const WHATSAPP_NUMBER = '250722189516';
+const WHATSAPP_NUMBER = '250789015289';
 const waLink = (text) => `https://wa.me/${WHATSAPP_NUMBER}${text ? `?text=${encodeURIComponent(text)}` : ''}`;
 
 const CART_ROUTE = '/cart';

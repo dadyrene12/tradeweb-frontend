@@ -208,7 +208,7 @@ const AdminSettings = () => {
             <Field label="Support phone">
               <input value={settings.supportPhone} onChange={(event) => set('supportPhone', event.target.value)} className={inputClass} />
             </Field>
-            <Field label="WhatsApp number" hint="Digits only, including country code. Example: 250722189516">
+            <Field label="WhatsApp number" hint="Digits only, including country code. Example: 250789015289">
               <input value={settings.whatsappNumber} onChange={(event) => set('whatsappNumber', event.target.value)} className={inputClass} />
             </Field>
           </Section>

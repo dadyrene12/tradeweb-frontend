@@ -10,7 +10,7 @@ import { Truck, ShieldCheck, RotateCcw, Headphones } from 'lucide-react';
 /* -------------------------------------------------------------------------- */
 /*  Settings: edit these to match your shop                                    */
 /* -------------------------------------------------------------------------- */
-const WHATSAPP_NUMBER = '250722189516';
+const WHATSAPP_NUMBER = '250789015289';
 const EMAIL = 'rnsmartelectronics@gmail.com';
 const MAP_URL = 'https://www.google.com/maps/search/?api=1&query=Nyarugenge+Kigali+Rwanda';
 
@@ -123,8 +123,6 @@ const Footer = () => {
                 <FiPhone className="mt-0.5 h-[18px] w-[18px] flex-shrink-0 text-[#FF6C00]" />
                 <span>
                   <a href="tel:+250789015289" className="transition-colors hover:text-white">0789 015 289</a>
-                  <span className="mx-2 text-white/30">/</span>
-                  <a href="tel:+250722189516" className="transition-colors hover:text-white">+250 722 189 516</a>
                 </span>
               </li>
               <li>

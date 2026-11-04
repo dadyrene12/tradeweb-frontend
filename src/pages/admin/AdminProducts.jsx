@@ -318,7 +318,7 @@ const AdminProducts = () => {
       priceLine,
       stockLine,
       '🚚 Fast delivery in Kigali & across Rwanda.',
-      '💳 Order on WhatsApp: +250 722 189 516',
+      '💳 Order on WhatsApp: +250 789 015 289',
       `🛒 Shop now: ${productUrl}`,
       '',
       `#${SITE_NAME.replace(/[^a-z0-9]/gi, '')} #${categoryTag} ${brandTag ? `#${brandTag} ` : ''}#Kigali #Rwanda #HomeAppliances #Electronics #Deals #ShopLocal`,

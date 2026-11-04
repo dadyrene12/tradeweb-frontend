@@ -21,7 +21,7 @@ import {
 } from '../lib/share';
 import fallbackProducts, { getProductById } from '../data/products';
 
-const STORE_WHATSAPP_NUMBER = '250722189516';
+const STORE_WHATSAPP_NUMBER = '250789015289';
 
 /* ---------- small helpers ---------- */
 
@@ -286,6 +286,11 @@ const ProductDetail = () => {
   const productCategory = String(product.category || 'Electronics')
     .replace(/[-_]/g, ' ')
     .replace(/\b\w/g, (character) => character.toUpperCase());
+  const reviewCount = Number(product.reviewCount || product.numReviews || reviews.length) || 0;
+  const productRating = Number(product.rating) || 0;
+  const priceValidUntil = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000)
+    .toISOString()
+    .slice(0, 10);
 
   const productStructuredData = [
     {
@@ -301,16 +306,29 @@ const ProductDetail = () => {
       },
       category: productCategory,
       url: absoluteUrl(canonicalPath),
+      ...(productRating > 0 && reviewCount > 0
+        ? {
+            aggregateRating: {
+              '@type': 'AggregateRating',
+              ratingValue: Number(productRating.toFixed(1)),
+              reviewCount,
+              bestRating: 5,
+              worstRating: 1,
+            },
+          }
+        : {}),
       offers: {
         '@type': 'Offer',
         url: absoluteUrl(canonicalPath),
         priceCurrency: 'RWF',
         price: Number(product.price) || 0,
+        priceValidUntil,
         availability: outOfStock ? 'https://schema.org/OutOfStock' : 'https://schema.org/InStock',
         itemCondition: 'https://schema.org/NewCondition',
         seller: {
           '@type': 'Organization',
           name: SITE_NAME,
+          url: absoluteUrl('/'),
         },
       },
     },

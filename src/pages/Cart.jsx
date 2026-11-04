@@ -28,7 +28,7 @@ import { sendQuickOrder } from '../lib/orders';
 /*  Store settings – edit these to match your business                         */
 /* -------------------------------------------------------------------------- */
 const STORE = {
-  whatsappNumber: '250722189516', // international format, digits only (no + or spaces)
+  whatsappNumber: '250789015289', // international format, digits only (no + or spaces)
   email: 'rnsmartelectronics@gmail.com',
   freeShippingThreshold: 100000, // order value that unlocks free shipping
   shippingFee: 0, // set to 0 to make shipping always free

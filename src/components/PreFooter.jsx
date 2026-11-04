@@ -253,9 +253,9 @@ const PreFooter = () => {
                 TikTok: @rn.smart.electron
               </a>
             </p>
-            <a href="tel:+250722189516" className="mt-4 inline-flex items-center gap-2 text-[12px] font-medium text-gray-500 transition-colors hover:text-[#FF6C00]">
+            <a href="tel:+250789015289" className="mt-4 inline-flex items-center gap-2 text-[12px] font-medium text-gray-500 transition-colors hover:text-[#FF6C00]">
               <Phone className="h-4 w-4 text-[#FF6C00]" />
-              0789 015 289 / +250 722 189 516
+              0789 015 289
             </a>
           </div>
         </div>

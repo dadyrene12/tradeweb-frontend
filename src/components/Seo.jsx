@@ -34,17 +34,33 @@ const upsertLink = (rel, href) => {
   element.setAttribute('href', href);
 };
 
+const upsertAlternate = (hreflang, href) => {
+  if (!href) return;
+  const selector = `link[rel="alternate"][hreflang="${hreflang}"]`;
+  let element = document.head.querySelector(selector);
+  if (!element) {
+    element = document.createElement('link');
+    element.setAttribute('rel', 'alternate');
+    element.setAttribute('hreflang', hreflang);
+    document.head.appendChild(element);
+  }
+  element.setAttribute('href', href);
+};
+
 const applyDefaults = () => {
   document.title = DEFAULT_TITLE;
   upsertMeta('name', 'description', DEFAULT_DESCRIPTION);
   upsertMeta('name', 'keywords', DEFAULT_KEYWORDS);
   upsertMeta('name', 'robots', DEFAULT_ROBOTS);
   upsertLink('canonical', `${SITE_URL}/`);
+  upsertAlternate('en-RW', `${SITE_URL}/`);
+  upsertAlternate('x-default', `${SITE_URL}/`);
   upsertMeta('property', 'og:title', DEFAULT_TITLE);
   upsertMeta('property', 'og:description', DEFAULT_DESCRIPTION);
   upsertMeta('property', 'og:url', `${SITE_URL}/`);
   upsertMeta('property', 'og:type', 'website');
   upsertMeta('property', 'og:image', DEFAULT_IMAGE);
+  upsertMeta('property', 'og:image:secure_url', DEFAULT_IMAGE);
   upsertMeta('property', 'og:image:alt', DEFAULT_TITLE);
   upsertMeta('property', 'og:site_name', SITE_NAME);
   upsertMeta('property', 'og:locale', 'en_RW');
@@ -84,12 +100,15 @@ const Seo = ({
     upsertMeta('name', 'publisher', SITE_NAME);
 
     upsertLink('canonical', url);
+    upsertAlternate('en-RW', url);
+    upsertAlternate('x-default', url);
 
     upsertMeta('property', 'og:title', title);
     upsertMeta('property', 'og:description', description);
     upsertMeta('property', 'og:url', url);
     upsertMeta('property', 'og:type', type);
     upsertMeta('property', 'og:image', imageUrl);
+    upsertMeta('property', 'og:image:secure_url', imageUrl);
     upsertMeta('property', 'og:image:alt', title);
     upsertMeta('property', 'og:site_name', SITE_NAME);
     upsertMeta('property', 'og:locale', 'en_RW');

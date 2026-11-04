@@ -12,8 +12,8 @@ import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
 import { formatMoney } from '../lib/currency';
 
-const PHONE_DISPLAY = '+250 722 189 516';
-const WHATSAPP_LINK = 'https://wa.me/250722189516';
+const PHONE_DISPLAY = '0789 015 289';
+const WHATSAPP_LINK = 'https://wa.me/250789015289';
 
 const categories = [
   { name: 'Smart TVs', link: '/shop?category=audio', icon: Tv },

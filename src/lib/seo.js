@@ -1,10 +1,10 @@
 export const SITE_URL = (
-  process.env.REACT_APP_SITE_URL || 'https://rn-smartelectronic-campany-ltdrw.vercel.app'
+  process.env.REACT_APP_SITE_URL || 'https://www.rnsmartelectronic.rw'
 ).replace(/\/+$/, '');
 
 export const SITE_NAME = 'RN Smart Electronics';
 export const SITE_LEGAL_NAME = 'RN Smart Electronics Company Ltd';
-export const STORE_WHATSAPP = '+250722189516';
+export const STORE_WHATSAPP = '+250789015289';
 export const STORE_EMAIL = 'rnsmartelectronics@gmail.com';
 export const STORE_ADDRESS = 'Kigali - Nyarugenge, Rwanda';
 export const STORE_FACEBOOK = 'https://www.facebook.com/nduwumukiza.romainrens';
