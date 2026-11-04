@@ -91,7 +91,7 @@ const PreFooter = () => {
         { label: 'FAQs', to: '/#faqs' },
         { label: 'After Sale Policy', to: '/contact' },
         { label: 'Payment Methods', to: '/contact' },
-        { label: 'Privacy Policy', to: '/contact' },
+        { label: 'Privacy Policy', to: '/privacy' },
       ],
     },
   ];

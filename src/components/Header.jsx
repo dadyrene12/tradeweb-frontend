@@ -33,6 +33,7 @@ const navLinks = [
   { label: 'Home Appliances', to: '/shop?category=appliances', secondary: true },
   { label: 'Audio', to: '/shop?category=audio', secondary: true },
   { label: 'Blog', to: '/blog' },
+  { label: 'About', to: '/about' },
   { label: 'Contact', to: '/contact' },
 ];
 

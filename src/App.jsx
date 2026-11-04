@@ -20,6 +20,9 @@ import Wishlist from './pages/Wishlist';
 import Compare from './pages/Compare';
 import Blog from './pages/Blog';
 import Contact from './pages/Contact';
+import About from './pages/About';
+import Privacy from './pages/Privacy';
+import Terms from './pages/Terms';
 import TrackOrder from './pages/TrackOrder';
 import AdminRoute from './components/AdminRoute';
 import AdminLayout from './pages/admin/AdminLayout';
@@ -83,6 +86,9 @@ function AppContent() {
           <Route path="/compare" element={<Compare />} />
           <Route path="/blog" element={<Blog />} />
           <Route path="/contact" element={<Contact />} />
+          <Route path="/about" element={<About />} />
+          <Route path="/privacy" element={<Privacy />} />
+          <Route path="/terms" element={<Terms />} />
           <Route path="/track" element={<TrackOrder />} />
           <Route element={<AdminRoute />}>
             <Route path="/admin" element={<AdminLayout />}>

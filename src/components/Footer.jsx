@@ -39,6 +39,7 @@ const COLUMNS = [
     title: 'Customer care',
     links: [
       { label: 'Contact us', to: '/contact' },
+      { label: 'About us', to: '/about' },
       { label: 'Order tracking', to: '/contact' },
       { label: 'Returns & exchanges', to: '/contact' },
       { label: 'Store location', to: '/contact' },
