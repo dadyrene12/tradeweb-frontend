@@ -5,6 +5,7 @@ export const SITE_URL = (
 export const SITE_NAME = 'RN Smart Electronics';
 export const SITE_LEGAL_NAME = 'RN Smart Electronics Company Ltd';
 export const STORE_WHATSAPP = '+250787015289';
+export const STORE_WHATSAPP_DIGITS = STORE_WHATSAPP.replace(/\D/g, '');
 export const STORE_EMAIL = 'rnsmartelectronics@gmail.com';
 export const STORE_ADDRESS = 'Kigali - Nyarugenge, Rwanda';
 export const STORE_FACEBOOK = 'https://www.facebook.com/nduwumukiza.romainrens';

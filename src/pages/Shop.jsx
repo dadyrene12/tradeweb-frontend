@@ -4,7 +4,7 @@ import Seo from '../components/Seo';
 import api from '../lib/api';
 import { CURRENCY, formatMoney } from '../lib/currency';
 import { toStoreProduct } from '../lib/productMapper';
-import { absoluteUrl, breadcrumbSchema } from '../lib/seo';
+import { absoluteUrl, breadcrumbSchema, STORE_WHATSAPP_DIGITS } from '../lib/seo';
 import {
   FiGrid, FiList, FiChevronRight, FiChevronLeft, FiSearch, FiX, FiStar,
   FiShoppingCart, FiSliders, FiCheck,
@@ -287,7 +287,7 @@ const Shop = () => {
   const handleWhatsapp = (product) => {
     const url = `${window.location.origin}/product/${product.id}`;
     const msg = `Hi! I'm interested in: ${product.name} - Price: ${formatMoney(product.price)}. Please provide more details. ${url}`;
-    window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, '_blank');
+    window.open(`https://wa.me/${STORE_WHATSAPP_DIGITS}?text=${encodeURIComponent(msg)}`, '_blank');
   };
 
   const activeChips = [

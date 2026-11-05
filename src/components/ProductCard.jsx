@@ -6,7 +6,7 @@ import { AiFillStar } from 'react-icons/ai';
 import { FaWhatsapp, FaFacebook, FaTwitter, FaLinkedin, FaInstagram } from 'react-icons/fa';
 import { useCart } from '../context/CartContext';
 import { formatMoney } from '../lib/currency';
-import { STORE_INSTAGRAM } from '../lib/seo';
+import { STORE_INSTAGRAM, STORE_WHATSAPP_DIGITS } from '../lib/seo';
 import {
   buildProductCaption,
   buildProductShareUrl,
@@ -32,7 +32,7 @@ const ProductCard = ({ product }) => {
   const handleBuyOnWhatsapp = (e) => {
     e.preventDefault();
     const message = `Hi! I'm interested in: ${name} - Price: ${formatMoney(price)}. Please provide more details. ${productUrl}`;
-    const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(message)}`;
+    const whatsappUrl = `https://wa.me/${STORE_WHATSAPP_DIGITS}?text=${encodeURIComponent(message)}`;
     window.open(whatsappUrl, '_blank');
   };
 
