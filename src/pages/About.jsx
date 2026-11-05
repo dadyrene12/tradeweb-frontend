@@ -153,7 +153,7 @@ const About = () => {
             <FiPhone className="h-5 w-5 text-[#FF6C00]" />
             <h2 className="mt-3 text-[15px] font-bold text-[#0B1B33]">Call or WhatsApp</h2>
             <a href={`tel:${STORE_WHATSAPP}`} className="mt-1 block text-[13.5px] text-gray-600 hover:text-[#FF6C00]">
-              0789 015 289
+              0787 015 289
             </a>
           </div>
           <div className="rounded-2xl border border-gray-200 bg-white p-5">

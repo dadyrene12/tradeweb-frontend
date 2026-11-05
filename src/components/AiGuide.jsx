@@ -4,8 +4,8 @@ import { FaRobot, FaWhatsapp } from 'react-icons/fa';
 import { FiArrowRight, FiSend, FiUser, FiX } from 'react-icons/fi';
 
 const STORE = {
-  whatsapp: 'https://wa.me/250789015289',
-  phone: '0789 015 289',
+  whatsapp: 'https://wa.me/250787015289',
+  phone: '0787 015 289',
   email: 'rnsmartelectronics@gmail.com',
   freeShipping: 100000,
 };

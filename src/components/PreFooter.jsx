@@ -62,7 +62,7 @@ const PreFooter = () => {
     },
     {
       q: 'How do I contact customer service?',
-      a: 'Use Live Chat, email rnsmartelectronics@gmail.com or call 0789 015 289. We are available to help with orders and product questions.',
+      a: 'Use Live Chat, email rnsmartelectronics@gmail.com or call 0787 015 289. We are available to help with orders and product questions.',
     },
   ];
 
@@ -253,9 +253,9 @@ const PreFooter = () => {
                 TikTok: @rn.smart.electron
               </a>
             </p>
-            <a href="tel:+250789015289" className="mt-4 inline-flex items-center gap-2 text-[12px] font-medium text-gray-500 transition-colors hover:text-[#FF6C00]">
+            <a href="tel:+250787015289" className="mt-4 inline-flex items-center gap-2 text-[12px] font-medium text-gray-500 transition-colors hover:text-[#FF6C00]">
               <Phone className="h-4 w-4 text-[#FF6C00]" />
-              0789 015 289
+              0787 015 289
             </a>
           </div>
         </div>

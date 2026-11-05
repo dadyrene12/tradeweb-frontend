@@ -10,7 +10,7 @@ import { formatMoney } from '../lib/currency';
 /* -------------------------------------------------------------------------- */
 /*  Settings                                                                   */
 /* -------------------------------------------------------------------------- */
-const WHATSAPP_NUMBER = '250789015289';
+const WHATSAPP_NUMBER = '250787015289';
 const MAX_ITEMS = 4;
 
 // Sample products. Replace with your compare list (from a context or the API).

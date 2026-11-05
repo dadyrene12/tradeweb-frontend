@@ -4,7 +4,7 @@ export const SITE_URL = (
 
 export const SITE_NAME = 'RN Smart Electronics';
 export const SITE_LEGAL_NAME = 'RN Smart Electronics Company Ltd';
-export const STORE_WHATSAPP = '+250789015289';
+export const STORE_WHATSAPP = '+250787015289';
 export const STORE_EMAIL = 'rnsmartelectronics@gmail.com';
 export const STORE_ADDRESS = 'Kigali - Nyarugenge, Rwanda';
 export const STORE_FACEBOOK = 'https://www.facebook.com/nduwumukiza.romainrens';
@@ -47,7 +47,9 @@ export const organizationSchema = {
   url: SITE_URL,
   logo: {
     '@type': 'ImageObject',
-    url: `${SITE_URL}/favicon.svg`,
+    url: `${SITE_URL}/logo.png`,
+    width: 512,
+    height: 512,
   },
   image: DEFAULT_IMAGE,
   description: DEFAULT_DESCRIPTION,
@@ -95,7 +97,12 @@ export const electronicsStoreSchema = {
   '@id': `${SITE_URL}/#store`,
   name: SITE_LEGAL_NAME,
   image: DEFAULT_IMAGE,
-  logo: `${SITE_URL}/favicon.svg`,
+  logo: {
+    '@type': 'ImageObject',
+    url: `${SITE_URL}/logo.png`,
+    width: 512,
+    height: 512,
+  },
   url: SITE_URL,
   telephone: STORE_WHATSAPP,
   email: STORE_EMAIL,

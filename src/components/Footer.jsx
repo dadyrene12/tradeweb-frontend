@@ -10,7 +10,7 @@ import { Truck, ShieldCheck, RotateCcw, Headphones } from 'lucide-react';
 /* -------------------------------------------------------------------------- */
 /*  Settings: edit these to match your shop                                    */
 /* -------------------------------------------------------------------------- */
-const WHATSAPP_NUMBER = '250789015289';
+const WHATSAPP_NUMBER = '250787015289';
 const EMAIL = 'rnsmartelectronics@gmail.com';
 const MAP_URL = 'https://www.google.com/maps/search/?api=1&query=Nyarugenge+Kigali+Rwanda';
 
@@ -123,7 +123,7 @@ const Footer = () => {
               <li className="flex items-start gap-3">
                 <FiPhone className="mt-0.5 h-[18px] w-[18px] flex-shrink-0 text-[#FF6C00]" />
                 <span>
-                  <a href="tel:+250789015289" className="transition-colors hover:text-white">0789 015 289</a>
+                  <a href="tel:+250787015289" className="transition-colors hover:text-white">0787 015 289</a>
                 </span>
               </li>
               <li>

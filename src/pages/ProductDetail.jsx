@@ -21,7 +21,7 @@ import {
 } from '../lib/share';
 import fallbackProducts, { getProductById } from '../data/products';
 
-const STORE_WHATSAPP_NUMBER = '250789015289';
+const STORE_WHATSAPP_NUMBER = '250787015289';
 
 /* ---------- small helpers ---------- */
 
